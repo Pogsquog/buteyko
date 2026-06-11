@@ -4,8 +4,9 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLogs } from '@/hooks/useLogs';
 import { Timer } from '@/components/Timer';
-import { Save, X } from 'lucide-react';
+import { Save, X, Bluetooth, Loader2 } from 'lucide-react';
 import { Session } from '@/types';
+import { useHeartRate } from '@/hooks/useHeartRate';
 
 const STEPS = [
   'INITIAL_PULSE',
@@ -255,21 +256,53 @@ interface PulseInputProps {
 }
 
 function PulseInput({ label, value, onChange, onNext }: PulseInputProps) {
+  const { read, state, isSupported, clearError } = useHeartRate();
+  const isBusy = state.status === 'connecting' || state.status === 'reading';
+
+  const handleBluetooth = async () => {
+    const bpm = await read();
+    if (bpm !== null) onChange(bpm);
+  };
+
   return (
     <div className="flex flex-col items-center w-full">
       <h2 className="text-2xl font-bold text-gray-800 mb-2 md:text-3xl">{label}</h2>
-      <p className="text-sm text-gray-500 mb-8 text-center md:text-base">Beats per minute</p>
+      <p className="text-sm text-gray-500 mb-6 text-center md:text-base">Beats per minute</p>
+
       <input
         type="number"
         inputMode="numeric"
         min={30}
         max={220}
-        className="text-5xl w-36 py-4 text-center border-2 border-blue-300 rounded-2xl mb-8 font-mono font-bold text-gray-800 focus:border-blue-500 outline-none md:text-6xl md:w-44 md:py-5"
+        className="text-5xl w-36 py-4 text-center border-2 border-blue-300 rounded-2xl mb-4 font-mono font-bold text-gray-800 focus:border-blue-500 outline-none md:text-6xl md:w-44 md:py-5"
         placeholder="–"
-        defaultValue={value}
+        value={value ?? ''}
         autoFocus
         onChange={e => onChange(parseInt(e.target.value) || 0)}
       />
+
+      {isSupported && (
+        <button
+          onClick={handleBluetooth}
+          disabled={isBusy}
+          className="flex items-center gap-2 text-sm text-blue-500 hover:text-blue-700 disabled:opacity-50 disabled:cursor-not-allowed mb-6 transition-colors md:text-base"
+        >
+          {isBusy
+            ? <><Loader2 size={15} className="animate-spin" /> {state.status === 'connecting' ? 'Connecting…' : 'Reading…'}</>
+            : <><Bluetooth size={15} /> Read from device</>
+          }
+        </button>
+      )}
+
+      {state.status === 'error' && (
+        <p className="text-xs text-red-500 mb-4 text-center max-w-xs">
+          {state.message}{' '}
+          <button onClick={clearError} className="underline">Dismiss</button>
+        </p>
+      )}
+
+      {!isSupported && <div className="mb-6" />}
+
       <button
         onClick={onNext}
         className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold w-full hover:bg-blue-700 active:scale-95 transition-transform md:text-lg md:py-5"
