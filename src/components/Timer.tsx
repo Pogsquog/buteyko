@@ -70,28 +70,28 @@ export const Timer: React.FC<TimerProps> = ({
 
   return (
     <div className="flex flex-col items-center w-full">
-      <span className="text-sm font-semibold text-gray-500 mb-4 uppercase tracking-wider">{label}</span>
+      <span className="text-base font-bold text-gray-700 mb-4 uppercase tracking-wider md:text-lg">{label}</span>
 
       {progress !== null && (
-        <div className="w-full bg-gray-100 rounded-full h-1.5 mb-5">
+        <div className="w-full bg-gray-100 rounded-full h-2 mb-5">
           <div
-            className="bg-blue-500 h-1.5 rounded-full transition-all duration-1000 ease-linear"
+            className="bg-blue-500 h-2 rounded-full transition-all duration-1000 ease-linear"
             style={{ width: `${progress}%` }}
           />
         </div>
       )}
 
-      <div className={`text-7xl font-mono font-bold tabular-nums mb-1 ${isComplete ? 'text-green-500' : 'text-gray-800'}`}>
+      <div className={`text-7xl font-mono font-bold tabular-nums mb-1 md:text-8xl ${isComplete ? 'text-green-500' : 'text-gray-800'}`}>
         {display}
       </div>
-      <div className="h-6 mb-6 flex items-center">
-        {isComplete && <span className="text-green-500 font-semibold text-sm tracking-wide uppercase">Complete!</span>}
+      <div className="h-7 mb-6 flex items-center">
+        {isComplete && <span className="text-green-500 font-semibold text-sm tracking-wide uppercase md:text-base">Complete!</span>}
       </div>
 
       {isComplete ? (
         <button
           onClick={confirm}
-          className="bg-green-500 text-white px-10 py-4 rounded-2xl font-bold text-lg w-full hover:bg-green-600 active:scale-95 transition-transform"
+          className="bg-green-500 text-white px-10 py-4 rounded-2xl font-bold text-lg w-full hover:bg-green-600 active:scale-95 transition-transform md:text-xl md:py-5"
         >
           Next Step
         </button>
@@ -99,13 +99,13 @@ export const Timer: React.FC<TimerProps> = ({
         <div className="flex gap-3 w-full">
           <button
             onClick={reset}
-            className="p-4 rounded-2xl bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+            className="p-4 rounded-2xl bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors md:p-5"
           >
             <RotateCcw size={20} />
           </button>
           <button
             onClick={toggle}
-            className={`flex-1 py-4 rounded-2xl font-bold text-base transition-colors flex items-center justify-center gap-2 ${
+            className={`flex-1 py-4 rounded-2xl font-bold text-base transition-colors flex items-center justify-center gap-2 md:text-lg md:py-5 ${
               isRunning
                 ? 'bg-red-100 text-red-600 hover:bg-red-200'
                 : 'bg-green-100 text-green-600 hover:bg-green-200'
@@ -119,7 +119,7 @@ export const Timer: React.FC<TimerProps> = ({
           {mode === 'stopwatch' ? (
             <button
               onClick={confirm}
-              className="p-4 rounded-2xl bg-blue-500 text-white hover:bg-blue-600 transition-colors"
+              className="p-4 rounded-2xl bg-blue-500 text-white hover:bg-blue-600 transition-colors md:p-5"
               title="Record time"
             >
               <Check size={20} />
@@ -127,7 +127,7 @@ export const Timer: React.FC<TimerProps> = ({
           ) : (
             <button
               onClick={confirm}
-              className="p-4 rounded-2xl bg-gray-200 text-gray-500 hover:bg-gray-300 transition-colors text-xs font-semibold"
+              className="p-4 rounded-2xl bg-gray-200 text-gray-500 hover:bg-gray-300 transition-colors text-xs font-semibold md:p-5 md:text-sm"
               title="Stop early"
             >
               Stop

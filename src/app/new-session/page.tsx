@@ -104,22 +104,22 @@ export default function NewSessionPage() {
       case 'INTERMEDIATE_TYPE':
         return (
           <div className="flex flex-col items-center w-full">
-            <h2 className="text-xl font-bold text-gray-800 mb-2">Pause Type</h2>
-            <p className="text-sm text-gray-400 mb-8 text-center">Select the type of pause for this exercise set</p>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2 md:text-3xl">Pause Type</h2>
+            <p className="text-sm text-gray-500 mb-8 text-center md:text-base">Select the type of pause for this exercise set</p>
             <div className="grid grid-cols-2 gap-4 w-full">
               <button
                 onClick={() => { setSession(s => ({ ...s, intermediateType: 'CP' })); next(); }}
-                className="p-8 rounded-2xl border-2 border-blue-200 bg-blue-50 font-bold text-2xl text-blue-700 active:scale-95 transition-transform hover:border-blue-400"
+                className="p-8 rounded-2xl border-2 border-blue-200 bg-blue-50 font-bold text-2xl text-blue-700 active:scale-95 transition-transform hover:border-blue-400 md:text-3xl md:p-10"
               >
                 CP
-                <p className="text-xs font-normal text-blue-400 mt-1">Control Pause</p>
+                <p className="text-xs font-normal text-blue-500 mt-1 md:text-sm">Control Pause</p>
               </button>
               <button
                 onClick={() => { setSession(s => ({ ...s, intermediateType: 'EP' })); next(); }}
-                className="p-8 rounded-2xl border-2 border-gray-200 font-bold text-2xl text-gray-600 active:scale-95 transition-transform hover:border-gray-400"
+                className="p-8 rounded-2xl border-2 border-gray-200 font-bold text-2xl text-gray-600 active:scale-95 transition-transform hover:border-gray-400 md:text-3xl md:p-10"
               >
                 EP
-                <p className="text-xs font-normal text-gray-400 mt-1">Extended Pause</p>
+                <p className="text-xs font-normal text-gray-500 mt-1 md:text-sm">Extended Pause</p>
               </button>
             </div>
           </div>
@@ -164,17 +164,17 @@ export default function NewSessionPage() {
       case 'NOTES':
         return (
           <div className="flex flex-col items-center w-full">
-            <h2 className="text-xl font-bold text-gray-800 mb-2">Notes</h2>
-            <p className="text-sm text-gray-400 mb-6 text-center">Medication, physical condition, anything notable</p>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2 md:text-3xl">Notes</h2>
+            <p className="text-sm text-gray-500 mb-6 text-center md:text-base">Medication, physical condition, anything notable</p>
             <textarea
-              className="w-full h-32 p-4 border-2 border-gray-200 rounded-2xl mb-6 focus:border-blue-500 outline-none resize-none text-gray-700"
+              className="w-full h-32 p-4 border-2 border-gray-200 rounded-2xl mb-6 focus:border-blue-500 outline-none resize-none text-gray-700 md:h-40 md:text-base"
               placeholder="e.g. RB 10 mins @ 18:00, felt congested..."
               defaultValue={session.notes}
               onChange={e => setSession(s => ({ ...s, notes: e.target.value }))}
             />
             <button
               onClick={handleSave}
-              className="flex items-center justify-center gap-2 bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold w-full hover:bg-blue-700 active:scale-95 transition-transform"
+              className="flex items-center justify-center gap-2 bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold w-full hover:bg-blue-700 active:scale-95 transition-transform md:text-lg md:py-5"
             >
               <Save size={20} /> Save Session
             </button>
@@ -184,14 +184,14 @@ export default function NewSessionPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <div className="max-w-md mx-auto">
+    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+      <div className="max-w-md mx-auto md:max-w-xl">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <button onClick={() => router.push('/')} className="p-2 text-gray-400 hover:text-gray-600">
             <X size={24} />
           </button>
-          <span className="text-sm font-medium text-gray-400">
+          <span className="text-sm font-semibold text-gray-500 md:text-base">
             {currentStep + 1} / {STEPS.length}
           </span>
           <div className="w-10" />
@@ -204,7 +204,7 @@ export default function NewSessionPage() {
               <React.Fragment key={i}>
                 <div className="flex flex-col items-center gap-1">
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors md:w-10 md:h-10 md:text-sm ${
                       i < seqIndex
                         ? 'bg-blue-200 text-blue-600'
                         : i === seqIndex
@@ -214,12 +214,12 @@ export default function NewSessionPage() {
                   >
                     {i < seqIndex ? '✓' : label.split('/')[0]}
                   </div>
-                  <span className={`text-[10px] font-medium ${i === seqIndex ? 'text-blue-600' : 'text-gray-300'}`}>
+                  <span className={`text-[10px] font-semibold md:text-xs ${i === seqIndex ? 'text-blue-600' : 'text-gray-400'}`}>
                     {label}
                   </span>
                 </div>
                 {i < SEQUENCE_LABELS.length - 1 && (
-                  <div className={`flex-1 h-px mx-1 ${i < seqIndex ? 'bg-blue-200' : 'bg-gray-100'}`} />
+                  <div className={`flex-1 h-px mx-1 ${i < seqIndex ? 'bg-blue-200' : 'bg-gray-200'}`} />
                 )}
               </React.Fragment>
             ))}
@@ -227,7 +227,7 @@ export default function NewSessionPage() {
         )}
 
         {/* Step card */}
-        <div className="bg-white p-8 rounded-3xl shadow-lg border border-gray-100 min-h-[380px] flex items-center justify-center">
+        <div className="bg-white p-8 rounded-3xl shadow-lg border border-gray-100 min-h-[380px] flex items-center justify-center md:p-12 md:min-h-[460px]">
           {renderStep()}
         </div>
 
@@ -236,7 +236,7 @@ export default function NewSessionPage() {
           <div className="mt-6 flex justify-start">
             <button
               onClick={back}
-              className="text-sm text-gray-400 hover:text-gray-600 font-medium"
+              className="text-sm text-gray-400 hover:text-gray-600 font-medium md:text-base"
             >
               ← Back
             </button>
@@ -257,14 +257,14 @@ interface PulseInputProps {
 function PulseInput({ label, value, onChange, onNext }: PulseInputProps) {
   return (
     <div className="flex flex-col items-center w-full">
-      <h2 className="text-xl font-bold text-gray-800 mb-2">{label}</h2>
-      <p className="text-sm text-gray-400 mb-8 text-center">Beats per minute</p>
+      <h2 className="text-2xl font-bold text-gray-800 mb-2 md:text-3xl">{label}</h2>
+      <p className="text-sm text-gray-500 mb-8 text-center md:text-base">Beats per minute</p>
       <input
         type="number"
         inputMode="numeric"
         min={30}
         max={220}
-        className="text-5xl w-36 py-4 text-center border-2 border-blue-300 rounded-2xl mb-8 font-mono font-bold text-gray-800 focus:border-blue-500 outline-none"
+        className="text-5xl w-36 py-4 text-center border-2 border-blue-300 rounded-2xl mb-8 font-mono font-bold text-gray-800 focus:border-blue-500 outline-none md:text-6xl md:w-44 md:py-5"
         placeholder="–"
         defaultValue={value}
         autoFocus
@@ -272,7 +272,7 @@ function PulseInput({ label, value, onChange, onNext }: PulseInputProps) {
       />
       <button
         onClick={onNext}
-        className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold w-full hover:bg-blue-700 active:scale-95 transition-transform"
+        className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold w-full hover:bg-blue-700 active:scale-95 transition-transform md:text-lg md:py-5"
       >
         Next
       </button>

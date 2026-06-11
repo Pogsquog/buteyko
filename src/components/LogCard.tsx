@@ -55,13 +55,13 @@ export const LogCard: React.FC<LogCardProps> = ({ log, onDelete }) => {
       </div>
 
       {/* Worksheet row: P / CP / RB / CP·EP / RB / CP / P */}
-      <div className="flex divide-x divide-gray-50 px-1 py-1">
+      <div className="flex divide-x divide-gray-100 px-1 py-1">
         {cells.map((cell, i) => (
           <div key={i} className="flex-1 flex flex-col items-center py-2 px-1 min-w-0">
-            <span className="text-[9px] font-bold text-gray-300 uppercase tracking-wider mb-0.5 truncate">
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5 truncate md:text-xs">
               {cell.label}
             </span>
-            <span className={`text-sm font-bold truncate ${cell.highlight ? 'text-blue-600' : 'text-gray-700'}`}>
+            <span className={`text-sm font-bold truncate md:text-base ${cell.highlight ? 'text-blue-600' : 'text-gray-700'}`}>
               {cell.value}
             </span>
           </div>
@@ -70,7 +70,7 @@ export const LogCard: React.FC<LogCardProps> = ({ log, onDelete }) => {
 
       {/* Notes */}
       {log.notes && (
-        <div className="px-4 py-2 border-t border-gray-50 text-xs text-gray-500 italic">
+        <div className="px-4 py-2 border-t border-gray-100 text-xs text-gray-500 italic md:text-sm">
           {log.notes}
         </div>
       )}
