@@ -8,6 +8,9 @@ interface TimerProps {
   label: string;
   mode?: 'stopwatch' | 'countdown';
   targetSeconds?: number;
+  instructions?: string;
+  animate?: 'breathe' | 'hold';
+  tips?: string[];
 }
 
 export const Timer: React.FC<TimerProps> = ({
@@ -15,11 +18,16 @@ export const Timer: React.FC<TimerProps> = ({
   label,
   mode = 'stopwatch',
   targetSeconds = 600,
+  instructions,
+  animate,
+  tips,
 }) => {
   const [elapsed, setElapsed] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+  const [breathPhase, setBreathPhase] = useState<'inhale' | 'exhale'>('inhale');
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const breathRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (mode === 'countdown' && isRunning && elapsed >= targetSeconds) {
@@ -30,7 +38,25 @@ export const Timer: React.FC<TimerProps> = ({
     }
   }, [elapsed, mode, targetSeconds, isRunning]);
 
-  useEffect(() => () => { if (intervalRef.current) clearInterval(intervalRef.current); }, []);
+  // Breathing animation: 5 s per phase ≈ 6 breaths/min
+  useEffect(() => {
+    if (animate !== 'breathe') return;
+    if (isRunning) {
+      setBreathPhase('inhale');
+      breathRef.current = setInterval(() => {
+        setBreathPhase(p => (p === 'inhale' ? 'exhale' : 'inhale'));
+      }, 5000);
+    } else {
+      if (breathRef.current) clearInterval(breathRef.current);
+      breathRef.current = null;
+    }
+    return () => { if (breathRef.current) clearInterval(breathRef.current); };
+  }, [animate, isRunning]);
+
+  useEffect(() => () => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    if (breathRef.current) clearInterval(breathRef.current);
+  }, []);
 
   const toggle = () => {
     if (isComplete) return;
@@ -46,15 +72,20 @@ export const Timer: React.FC<TimerProps> = ({
 
   const reset = () => {
     if (intervalRef.current) clearInterval(intervalRef.current);
+    if (breathRef.current) clearInterval(breathRef.current);
     intervalRef.current = null;
+    breathRef.current = null;
     setIsRunning(false);
     setElapsed(0);
     setIsComplete(false);
+    setBreathPhase('inhale');
   };
 
   const confirm = () => {
     if (intervalRef.current) clearInterval(intervalRef.current);
+    if (breathRef.current) clearInterval(breathRef.current);
     intervalRef.current = null;
+    breathRef.current = null;
     setIsRunning(false);
     onComplete(elapsed);
   };
@@ -67,13 +98,16 @@ export const Timer: React.FC<TimerProps> = ({
 
   const display = mode === 'countdown' ? fmt(Math.max(0, targetSeconds - elapsed)) : fmt(elapsed);
   const progress = mode === 'countdown' ? Math.min(100, (elapsed / targetSeconds) * 100) : null;
+  const currentTip = tips && tips.length > 0 && isRunning
+    ? tips[Math.floor(elapsed / 60) % tips.length]
+    : null;
 
   return (
     <div className="flex flex-col items-center w-full">
-      <span className="text-base font-bold text-gray-700 mb-4 uppercase tracking-wider md:text-lg">{label}</span>
+      <span className="text-base font-bold text-gray-700 mb-3 uppercase tracking-wider md:text-lg">{label}</span>
 
       {progress !== null && (
-        <div className="w-full bg-gray-100 rounded-full h-2 mb-5">
+        <div className="w-full bg-gray-100 rounded-full h-2 mb-4">
           <div
             className="bg-blue-500 h-2 rounded-full transition-all duration-1000 ease-linear"
             style={{ width: `${progress}%` }}
@@ -81,10 +115,47 @@ export const Timer: React.FC<TimerProps> = ({
         </div>
       )}
 
+      {animate === 'breathe' && (
+        <div className="flex flex-col items-center mb-3">
+          <div className="w-20 h-20 flex items-center justify-center">
+            <div
+              className={`w-20 h-20 rounded-full bg-blue-50 border-2 border-blue-200 transition-transform ease-in-out ${
+                isRunning && breathPhase === 'inhale' ? 'scale-100' : 'scale-[0.55]'
+              }`}
+              style={{ transitionDuration: '5000ms' }}
+            />
+          </div>
+          <p className="text-xs text-blue-400 mt-2 h-4 font-medium">
+            {isRunning
+              ? breathPhase === 'inhale' ? 'breathe in…' : 'breathe out…'
+              : 'breathe gently through your nose'}
+          </p>
+        </div>
+      )}
+
+      {animate === 'hold' && (
+        <div className="flex flex-col items-center mb-3">
+          <div className={`w-14 h-14 rounded-full border-2 flex items-center justify-center transition-colors duration-700 ${
+            isRunning ? 'bg-amber-50 border-amber-300' : 'bg-gray-50 border-gray-200'
+          }`}>
+            <div className={`w-4 h-4 rounded-full transition-colors duration-700 ${
+              isRunning ? 'bg-amber-300 animate-pulse' : 'bg-gray-200'
+            }`} />
+          </div>
+          <p className={`text-xs mt-2 h-4 font-medium transition-colors duration-700 ${isRunning ? 'text-amber-500' : 'text-gray-400'}`}>
+            {isRunning ? 'holding…' : 'breathe out normally, then hold'}
+          </p>
+        </div>
+      )}
+
+      {instructions && !animate && !isRunning && elapsed === 0 && (
+        <p className="text-sm text-gray-400 text-center mb-3 max-w-xs leading-relaxed">{instructions}</p>
+      )}
+
       <div className={`text-7xl font-mono font-bold tabular-nums mb-1 md:text-8xl ${isComplete ? 'text-green-500' : 'text-gray-800'}`}>
         {display}
       </div>
-      <div className="h-7 mb-6 flex items-center">
+      <div className="h-7 mb-3 flex items-center">
         {isComplete && <span className="text-green-500 font-semibold text-sm tracking-wide uppercase md:text-base">Complete!</span>}
       </div>
 
@@ -133,6 +204,12 @@ export const Timer: React.FC<TimerProps> = ({
               Stop
             </button>
           )}
+        </div>
+      )}
+
+      {currentTip && (
+        <div className="mt-4 p-3 bg-blue-50 rounded-xl border border-blue-100 w-full">
+          <p className="text-xs text-blue-600 leading-relaxed text-center">{currentTip}</p>
         </div>
       )}
     </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 export type HeartRateState =
   | { status: 'idle' }
@@ -10,9 +10,13 @@ export type HeartRateState =
 
 export function useHeartRate() {
   const [state, setState] = useState<HeartRateState>({ status: 'idle' });
+  // Evaluated in useEffect so SSR and client hydration both start false,
+  // then the client sets the real value after mount.
+  const [isSupported, setIsSupported] = useState(false);
 
-  const isSupported =
-    typeof navigator !== 'undefined' && navigator.bluetooth != null;
+  useEffect(() => {
+    setIsSupported(navigator.bluetooth != null);
+  }, []);
 
   const read = useCallback(async (): Promise<number | null> => {
     if (!isSupported || !navigator.bluetooth) return null;

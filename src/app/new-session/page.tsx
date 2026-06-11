@@ -38,6 +38,19 @@ const SEQUENCE_LABELS = ['P', 'CP', 'RB', 'CP/EP', 'RB', 'CP', 'P'];
 
 const RB_DURATION = 600; // 10 minutes
 
+const RB_TIPS = [
+  'Breathe gently through your nose, keeping the volume slightly smaller than feels natural. Your breathing should be quiet and barely visible.',
+  'CO₂ is not just a waste gas — it triggers the Bohr effect: higher CO₂ allows haemoglobin to release oxygen to your tissues more readily.',
+  'A mild feeling of air hunger is normal and intentional. It signals CO₂ is rising, which is exactly the goal of this exercise.',
+  'Nasal breathing produces nitric oxide in the sinuses, which dilates airways and blood vessels. Mouth breathing bypasses this completely.',
+  'The Control Pause (CP) is a proxy for your CO₂ tolerance. Under 20 s suggests chronic over-breathing; 40 s+ is considered a healthy baseline.',
+  'A clinical trial published in the BMJ (Cooper et al., 2003) found Buteyko significantly reduced reliever inhaler use and improved quality-of-life scores.',
+  'Chronic over-breathing lowers CO₂, which constricts blood vessels and causes haemoglobin to grip oxygen more tightly — the opposite of what the body needs.',
+  'Reduced breathing gradually raises your CO₂ threshold, so your brain becomes less likely to trigger a deep-breath urge in everyday life.',
+  'Research (McHugh et al., 2003) found Buteyko practice reduced daily symptoms and improved overall breathing comfort within weeks of starting.',
+  'Consistency matters more than duration. Regular short sessions build tolerance faster than occasional long ones.',
+];
+
 export default function NewSessionPage() {
   const router = useRouter();
   const { saveLog } = useLogs();
@@ -89,6 +102,8 @@ export default function NewSessionPage() {
             key="initial-cp"
             label="Control Pause"
             mode="stopwatch"
+            animate="hold"
+            instructions="After a normal exhale, pinch your nose. Time until the first gentle urge to breathe — don't push through discomfort."
             onComplete={v => { setSession(s => ({ ...s, initialCP: v })); next(); }}
           />
         );
@@ -99,6 +114,8 @@ export default function NewSessionPage() {
             label="Reduced Breathing"
             mode="countdown"
             targetSeconds={RB_DURATION}
+            animate="breathe"
+            tips={RB_TIPS}
             onComplete={v => { setSession(s => ({ ...s, rb1Duration: v })); next(); }}
           />
         );
@@ -131,6 +148,12 @@ export default function NewSessionPage() {
             key="intermediate-value"
             label={`${session.intermediateType} Pause`}
             mode="stopwatch"
+            animate="hold"
+            instructions={
+              session.intermediateType === 'EP'
+                ? 'After exhaling, hold until you feel a medium-strong air hunger — noticeably more discomfort than a CP.'
+                : 'After a normal exhale, pinch your nose and hold until the first urge to breathe.'
+            }
             onComplete={v => { setSession(s => ({ ...s, intermediateValue: v })); next(); }}
           />
         );
@@ -141,6 +164,8 @@ export default function NewSessionPage() {
             label="Reduced Breathing"
             mode="countdown"
             targetSeconds={RB_DURATION}
+            animate="breathe"
+            tips={RB_TIPS}
             onComplete={v => { setSession(s => ({ ...s, rb2Duration: v })); next(); }}
           />
         );
@@ -150,6 +175,8 @@ export default function NewSessionPage() {
             key="final-cp"
             label="Final Control Pause"
             mode="stopwatch"
+            animate="hold"
+            instructions="After a normal exhale, pinch your nose and hold until the first gentle urge to breathe."
             onComplete={v => { setSession(s => ({ ...s, finalCP: v })); next(); }}
           />
         );
