@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Square, RotateCcw, Check } from 'lucide-react';
+import { Play, Square, RotateCcw, Check, Keyboard, Timer as TimerIcon } from 'lucide-react';
 
 interface TimerProps {
   onComplete: (seconds: number) => void;
@@ -11,6 +11,8 @@ interface TimerProps {
   instructions?: string;
   animate?: 'breathe' | 'hold';
   tips?: string[];
+  /** Offer a numeric input as an alternative to running the on-screen timer */
+  allowManualEntry?: boolean;
 }
 
 export const Timer: React.FC<TimerProps> = ({
@@ -21,11 +23,14 @@ export const Timer: React.FC<TimerProps> = ({
   instructions,
   animate,
   tips,
+  allowManualEntry = false,
 }) => {
   const [elapsed, setElapsed] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [breathPhase, setBreathPhase] = useState<'inhale' | 'exhale'>('inhale');
+  const [isManual, setIsManual] = useState(false);
+  const [manualValue, setManualValue] = useState('');
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const breathRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -70,24 +75,43 @@ export const Timer: React.FC<TimerProps> = ({
     }
   };
 
-  const reset = () => {
+  const stop = () => {
     if (intervalRef.current) clearInterval(intervalRef.current);
     if (breathRef.current) clearInterval(breathRef.current);
     intervalRef.current = null;
     breathRef.current = null;
     setIsRunning(false);
+  };
+
+  const reset = () => {
+    stop();
     setElapsed(0);
     setIsComplete(false);
     setBreathPhase('inhale');
   };
 
   const confirm = () => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    if (breathRef.current) clearInterval(breathRef.current);
-    intervalRef.current = null;
-    breathRef.current = null;
-    setIsRunning(false);
+    stop();
     onComplete(elapsed);
+  };
+
+  const openManual = () => {
+    stop();
+    setManualValue(elapsed > 0 ? String(elapsed) : '');
+    setIsManual(true);
+  };
+
+  const closeManual = () => {
+    setIsManual(false);
+    setBreathPhase('inhale');
+  };
+
+  const manualSeconds = parseInt(manualValue, 10);
+  const manualIsValid = Number.isFinite(manualSeconds) && manualSeconds > 0;
+
+  const submitManual = () => {
+    if (!manualIsValid) return;
+    onComplete(manualSeconds);
   };
 
   const fmt = (s: number) => {
@@ -101,6 +125,49 @@ export const Timer: React.FC<TimerProps> = ({
   const currentTip = tips && tips.length > 0 && isRunning
     ? tips[Math.floor(elapsed / 60) % tips.length]
     : null;
+
+  if (isManual) {
+    return (
+      <div className="flex flex-col items-center w-full">
+        <span className="text-base font-bold text-gray-700 mb-3 uppercase tracking-wider md:text-lg">{label}</span>
+        <p className="text-sm text-gray-500 mb-6 text-center md:text-base">
+          Enter the time you held for, in seconds
+        </p>
+
+        <div className="flex items-baseline gap-2 mb-6">
+          <input
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={600}
+            step={1}
+            className="text-5xl w-36 py-4 text-center border-2 border-blue-300 rounded-2xl font-mono font-bold text-gray-800 focus:border-blue-500 outline-none md:text-6xl md:w-44 md:py-5"
+            placeholder="–"
+            value={manualValue}
+            autoFocus
+            onChange={e => setManualValue(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') submitManual(); }}
+          />
+          <span className="text-lg font-semibold text-gray-400 md:text-xl">s</span>
+        </div>
+
+        <button
+          onClick={submitManual}
+          disabled={!manualIsValid}
+          className="bg-blue-600 text-white px-10 py-4 rounded-2xl font-bold text-lg w-full hover:bg-blue-700 active:scale-95 transition-transform disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100 md:text-xl md:py-5"
+        >
+          Next Step
+        </button>
+
+        <button
+          onClick={closeManual}
+          className="mt-4 flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 font-medium transition-colors md:text-base"
+        >
+          <TimerIcon size={15} /> Use the timer instead
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col items-center w-full">
@@ -205,6 +272,15 @@ export const Timer: React.FC<TimerProps> = ({
             </button>
           )}
         </div>
+      )}
+
+      {allowManualEntry && !isComplete && (
+        <button
+          onClick={openManual}
+          className="mt-4 flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 font-medium transition-colors md:text-base"
+        >
+          <Keyboard size={15} /> Enter time manually
+        </button>
       )}
 
       {currentTip && (

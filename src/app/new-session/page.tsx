@@ -103,6 +103,7 @@ export default function NewSessionPage() {
             label="Control Pause"
             mode="stopwatch"
             animate="hold"
+            allowManualEntry
             instructions="After a normal exhale, pinch your nose. Time until the first gentle urge to breathe — don't push through discomfort."
             onComplete={v => { setSession(s => ({ ...s, initialCP: v })); next(); }}
           />
@@ -149,6 +150,7 @@ export default function NewSessionPage() {
             label={`${session.intermediateType} Pause`}
             mode="stopwatch"
             animate="hold"
+            allowManualEntry
             instructions={
               session.intermediateType === 'EP'
                 ? 'After exhaling, hold until you feel a medium-strong air hunger — noticeably more discomfort than a CP.'
@@ -176,6 +178,7 @@ export default function NewSessionPage() {
             label="Final Control Pause"
             mode="stopwatch"
             animate="hold"
+            allowManualEntry
             instructions="After a normal exhale, pinch your nose and hold until the first gentle urge to breathe."
             onComplete={v => { setSession(s => ({ ...s, finalCP: v })); next(); }}
           />
