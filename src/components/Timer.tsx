@@ -95,9 +95,16 @@ export const Timer: React.FC<TimerProps> = ({
     onComplete(elapsed);
   };
 
+  // Holds are a handful of seconds; reduced breathing runs for minutes.
+  const manualInMinutes = mode === 'countdown';
+  const toManualUnits = (seconds: number) => (manualInMinutes ? Math.round(seconds / 6) / 10 : seconds);
+
   const openManual = () => {
     stop();
-    setManualValue(elapsed > 0 ? String(elapsed) : '');
+    // Prefill with whatever the timer already counted, else the target duration
+    // for a countdown (the usual answer) or nothing at all for a hold.
+    if (elapsed > 0) setManualValue(String(toManualUnits(elapsed)));
+    else setManualValue(manualInMinutes ? String(toManualUnits(targetSeconds)) : '');
     setIsManual(true);
   };
 
@@ -106,8 +113,11 @@ export const Timer: React.FC<TimerProps> = ({
     setBreathPhase('inhale');
   };
 
-  const manualSeconds = parseInt(manualValue, 10);
-  const manualIsValid = Number.isFinite(manualSeconds) && manualSeconds > 0;
+  const manualNumber = parseFloat(manualValue);
+  const manualSeconds = Number.isFinite(manualNumber)
+    ? Math.round(manualInMinutes ? manualNumber * 60 : manualNumber)
+    : 0;
+  const manualIsValid = manualSeconds > 0;
 
   const submitManual = () => {
     if (!manualIsValid) return;
@@ -131,16 +141,18 @@ export const Timer: React.FC<TimerProps> = ({
       <div className="flex flex-col items-center w-full">
         <span className="text-base font-bold text-gray-700 mb-3 uppercase tracking-wider md:text-lg">{label}</span>
         <p className="text-sm text-gray-500 mb-6 text-center md:text-base">
-          Enter the time you held for, in seconds
+          {manualInMinutes
+            ? 'Enter how long you practised for, in minutes'
+            : 'Enter the time you held for, in seconds'}
         </p>
 
         <div className="flex items-baseline gap-2 mb-6">
           <input
             type="number"
-            inputMode="numeric"
+            inputMode={manualInMinutes ? 'decimal' : 'numeric'}
             min={0}
-            max={600}
-            step={1}
+            max={manualInMinutes ? 120 : 600}
+            step={manualInMinutes ? 0.5 : 1}
             className="text-5xl w-36 py-4 text-center border-2 border-blue-300 rounded-2xl font-mono font-bold text-gray-800 focus:border-blue-500 outline-none md:text-6xl md:w-44 md:py-5"
             placeholder="–"
             value={manualValue}
@@ -148,7 +160,7 @@ export const Timer: React.FC<TimerProps> = ({
             onChange={e => setManualValue(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') submitManual(); }}
           />
-          <span className="text-lg font-semibold text-gray-400 md:text-xl">s</span>
+          <span className="text-lg font-semibold text-gray-400 md:text-xl">{manualInMinutes ? 'min' : 's'}</span>
         </div>
 
         <button

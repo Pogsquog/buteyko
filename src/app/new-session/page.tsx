@@ -117,6 +117,7 @@ export default function NewSessionPage() {
             targetSeconds={RB_DURATION}
             animate="breathe"
             tips={RB_TIPS}
+            allowManualEntry
             onComplete={v => { setSession(s => ({ ...s, rb1Duration: v })); next(); }}
           />
         );
@@ -168,6 +169,7 @@ export default function NewSessionPage() {
             targetSeconds={RB_DURATION}
             animate="breathe"
             tips={RB_TIPS}
+            allowManualEntry
             onComplete={v => { setSession(s => ({ ...s, rb2Duration: v })); next(); }}
           />
         );
