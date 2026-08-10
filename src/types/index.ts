@@ -12,4 +12,4 @@ export interface Session {
   notes: string;
 }
 
-export interface LogEntry extends Session {}
+export type LogEntry = Session;

@@ -27,35 +27,26 @@ export const Timer: React.FC<TimerProps> = ({
 }) => {
   const [elapsed, setElapsed] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
-  const [isComplete, setIsComplete] = useState(false);
   const [breathPhase, setBreathPhase] = useState<'inhale' | 'exhale'>('inhale');
   const [isManual, setIsManual] = useState(false);
   const [manualValue, setManualValue] = useState('');
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const breathRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Mirrors `elapsed` so the tick can decide to stop without re-creating itself
+  const elapsedRef = useRef(0);
 
-  useEffect(() => {
-    if (mode === 'countdown' && isRunning && elapsed >= targetSeconds) {
-      clearInterval(intervalRef.current!);
-      intervalRef.current = null;
-      setIsRunning(false);
-      setIsComplete(true);
-    }
-  }, [elapsed, mode, targetSeconds, isRunning]);
+  const isComplete = mode === 'countdown' && elapsed >= targetSeconds;
 
   // Breathing animation: 5 s per phase ≈ 6 breaths/min
   useEffect(() => {
-    if (animate !== 'breathe') return;
-    if (isRunning) {
-      setBreathPhase('inhale');
-      breathRef.current = setInterval(() => {
-        setBreathPhase(p => (p === 'inhale' ? 'exhale' : 'inhale'));
-      }, 5000);
-    } else {
+    if (animate !== 'breathe' || !isRunning) return;
+    breathRef.current = setInterval(() => {
+      setBreathPhase(p => (p === 'inhale' ? 'exhale' : 'inhale'));
+    }, 5000);
+    return () => {
       if (breathRef.current) clearInterval(breathRef.current);
       breathRef.current = null;
-    }
-    return () => { if (breathRef.current) clearInterval(breathRef.current); };
+    };
   }, [animate, isRunning]);
 
   useEffect(() => () => {
@@ -63,30 +54,43 @@ export const Timer: React.FC<TimerProps> = ({
     if (breathRef.current) clearInterval(breathRef.current);
   }, []);
 
+  const clearTick = () => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    intervalRef.current = null;
+  };
+
+  const tick = () => {
+    elapsedRef.current += 1;
+    setElapsed(elapsedRef.current);
+    if (mode === 'countdown' && elapsedRef.current >= targetSeconds) {
+      clearTick();
+      setIsRunning(false);
+    }
+  };
+
   const toggle = () => {
     if (isComplete) return;
     if (isRunning) {
-      clearInterval(intervalRef.current!);
-      intervalRef.current = null;
+      clearTick();
       setIsRunning(false);
     } else {
       setIsRunning(true);
-      intervalRef.current = setInterval(() => setElapsed(s => s + 1), 1000);
+      setBreathPhase('inhale');
+      intervalRef.current = setInterval(tick, 1000);
     }
   };
 
   const stop = () => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
+    clearTick();
     if (breathRef.current) clearInterval(breathRef.current);
-    intervalRef.current = null;
     breathRef.current = null;
     setIsRunning(false);
   };
 
   const reset = () => {
     stop();
+    elapsedRef.current = 0;
     setElapsed(0);
-    setIsComplete(false);
     setBreathPhase('inhale');
   };
 
