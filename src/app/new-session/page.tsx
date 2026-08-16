@@ -1,14 +1,14 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useLogs } from '@/hooks/useLogs';
 import { useFormat } from '@/hooks/useFormat';
 import { Timer } from '@/components/Timer';
 import { PulseInput } from '@/components/PulseInput';
-import { Save, Settings2, X } from 'lucide-react';
-import { PauseType, Session, SessionBlock, SessionFormat } from '@/types';
+import { Loader2, Save, Settings2, X } from 'lucide-react';
+import { PauseType, SessionBlock, SessionFormat } from '@/types';
 import { blocksForFormat, describeFormat, fmtDuration } from '@/lib/format';
 
 type Step =
@@ -65,22 +65,16 @@ const RB_TIPS = [
 ];
 
 export default function NewSessionPage() {
-  const router = useRouter();
-  const { saveLog } = useLogs();
   const { format: savedFormat, isLoaded } = useFormat();
 
   if (!isLoaded) return null;
-  return <SessionFlow format={savedFormat} onExit={() => router.push('/')} onSaved={() => router.push('/')} saveLog={saveLog} />;
+  return <SessionFlow format={savedFormat} />;
 }
 
-interface SessionFlowProps {
-  format: SessionFormat;
-  saveLog: (session: Session) => void;
-  onExit: () => void;
-  onSaved: () => void;
-}
+function SessionFlow({ format: initialFormat }: { format: SessionFormat }) {
+  const router = useRouter();
+  const { saveLog } = useLogs();
 
-function SessionFlow({ format: initialFormat, saveLog, onExit, onSaved }: SessionFlowProps) {
   // Pinned at mount: changing the format mid-session would reshuffle the steps
   // underneath whatever has already been recorded.
   const [format] = useState(initialFormat);
@@ -92,12 +86,22 @@ function SessionFlow({ format: initialFormat, saveLog, onExit, onSaved }: Sessio
   const [initialCP, setInitialCP] = useState(0);
   const [notes, setNotes] = useState('');
   const [blocks, setBlocks] = useState<SessionBlock[]>(() => blocksForFormat(format));
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveIsSlow, setSaveIsSlow] = useState(false);
+  // A ref, not the state above: two taps in the same tick both read the old
+  // state, but the ref is already set by the time the second one runs.
+  const savingRef = useRef(false);
 
   const step = steps[currentStep];
   const seqIndex = seqIndexOf(step, format.blocks);
 
-  const next = () => setCurrentStep(s => Math.min(s + 1, steps.length - 1));
-  const back = () => setCurrentStep(s => Math.max(s - 1, 0));
+  // Both moves are anchored to the step the handler was rendered for, so a
+  // double-tap that fires twice before React re-renders moves one step, not two
+  // — otherwise a stray second tap silently skips past a measurement.
+  const next = () =>
+    setCurrentStep(s => (s === currentStep ? Math.min(s + 1, steps.length - 1) : s));
+  const back = () =>
+    setCurrentStep(s => (s === currentStep ? Math.max(s - 1, 0) : s));
 
   const updateBlock = (index: number, patch: Partial<SessionBlock>) =>
     setBlocks(bs => bs.map((b, i) => (i === index ? { ...b, ...patch } : b)));
@@ -118,6 +122,9 @@ function SessionFlow({ format: initialFormat, saveLog, onExit, onSaved }: Sessio
   ];
 
   const handleSave = () => {
+    if (savingRef.current) return; // an impatient second tap would save twice
+    savingRef.current = true;
+    setIsSaving(true);
     saveLog({
       id: Date.now().toString(),
       timestamp: Date.now(),
@@ -127,8 +134,22 @@ function SessionFlow({ format: initialFormat, saveLog, onExit, onSaved }: Sessio
       finalPulse: finalPulse ?? 0,
       notes,
     });
-    onSaved();
+    // replace(): the finished session should not be somewhere Back can return to.
+    router.replace('/');
   };
+
+  // The save itself is instant (localStorage); it is the navigation back to the
+  // history that can drag on a slow connection, so warm it up beforehand and
+  // say so if it takes long enough to look broken.
+  useEffect(() => {
+    if (step.kind === 'NOTES') router.prefetch('/');
+  }, [step.kind, router]);
+
+  useEffect(() => {
+    if (!isSaving) return;
+    const id = setTimeout(() => setSaveIsSlow(true), 4000);
+    return () => clearTimeout(id);
+  }, [isSaving]);
 
   const blockLabel = (index: number) =>
     format.blocks > 1 ? ` (${index + 1} of ${format.blocks})` : '';
@@ -262,10 +283,19 @@ function SessionFlow({ format: initialFormat, saveLog, onExit, onSaved }: Sessio
             />
             <button
               onClick={handleSave}
-              className="flex items-center justify-center gap-2 bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold w-full hover:bg-blue-700 active:scale-95 transition-transform md:text-lg md:py-5"
+              disabled={isSaving}
+              className="flex items-center justify-center gap-2 bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold w-full hover:bg-blue-700 active:scale-95 transition-transform disabled:opacity-70 disabled:cursor-not-allowed disabled:active:scale-100 md:text-lg md:py-5"
             >
-              <Save size={20} /> Save Session
+              {isSaving
+                ? <><Loader2 size={20} className="animate-spin" /> Saving…</>
+                : <><Save size={20} /> Save Session</>
+              }
             </button>
+            {saveIsSlow && (
+              <p className="mt-3 text-xs text-gray-400 text-center md:text-sm">
+                Session saved — still opening your history…
+              </p>
+            )}
           </div>
         );
     }
@@ -276,7 +306,7 @@ function SessionFlow({ format: initialFormat, saveLog, onExit, onSaved }: Sessio
       <div className="max-w-md mx-auto md:max-w-xl">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
-          <button onClick={onExit} className="p-2 text-gray-400 hover:text-gray-600" aria-label="Close">
+          <button onClick={() => router.push('/')} className="p-2 text-gray-400 hover:text-gray-600" aria-label="Close">
             <X size={24} />
           </button>
           <span className="text-sm font-semibold text-gray-500 md:text-base">

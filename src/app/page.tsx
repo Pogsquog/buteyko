@@ -1,14 +1,24 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import Link, { useLinkStatus } from 'next/link';
 import { useLogs } from '@/hooks/useLogs';
 import { LogCard } from '@/components/LogCard';
-import { Plus, Activity, Settings2, Wind } from 'lucide-react';
+import { Plus, Activity, Loader2, Settings2, Wind } from 'lucide-react';
+
+/**
+ * Swaps the icon for a spinner while the route is still loading, so a tap on a
+ * slow connection visibly does something instead of looking ignored. Same
+ * footprint either way, so nothing shifts.
+ */
+function NewSessionIcon({ size }: { size: number }) {
+  const { pending } = useLinkStatus();
+  return pending
+    ? <Loader2 size={size} className="animate-spin" />
+    : <Plus size={size} />;
+}
 
 export default function Home() {
-  const router = useRouter();
   const { logs, deleteLog, isLoaded } = useLogs();
 
   if (!isLoaded) return null;
@@ -31,12 +41,12 @@ export default function Home() {
             >
               <Settings2 size={22} />
             </Link>
-            <button
-              onClick={() => router.push('/new-session')}
+            <Link
+              href="/new-session"
               className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-md transition-transform active:scale-95 flex items-center gap-2 text-sm md:text-base md:px-6 md:py-3"
             >
-              <Plus size={18} /> New Session
-            </button>
+              <NewSessionIcon size={18} /> New Session
+            </Link>
           </div>
         </div>
       </header>
@@ -46,12 +56,12 @@ export default function Home() {
           <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200">
             <Activity size={48} className="mx-auto text-gray-300 mb-4" />
             <p className="text-gray-600 font-medium md:text-lg">No sessions recorded yet.</p>
-            <button
-              onClick={() => router.push('/new-session')}
-              className="mt-4 text-blue-600 font-bold md:text-lg"
+            <Link
+              href="/new-session"
+              className="inline-block mt-4 text-blue-600 font-bold md:text-lg"
             >
               Start your first session
-            </button>
+            </Link>
           </div>
         ) : (
           <div className="space-y-3">
@@ -65,12 +75,12 @@ export default function Home() {
 
       {/* FAB — only visible on mobile where the header button is small */}
       <div className="fixed bottom-6 right-6 left-6 max-w-2xl mx-auto md:hidden">
-        <button
-          onClick={() => router.push('/new-session')}
+        <Link
+          href="/new-session"
           className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-bold shadow-xl flex items-center justify-center gap-2 transition-transform active:scale-95"
         >
-          <Plus size={20} /> New Exercise Set
-        </button>
+          <NewSessionIcon size={20} /> New Exercise Set
+        </Link>
       </div>
     </main>
   );
