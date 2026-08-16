@@ -21,16 +21,21 @@ function fmtCP(seconds: number): string {
 export const LogCard: React.FC<LogCardProps> = ({ log, onDelete }) => {
   const date = new Date(log.timestamp);
 
-  // P / CP / RB / CP·EP / RB / CP / P
+  // P / CP / (RB / CP·EP) × n / P
   const cells = [
     { label: 'P', value: String(log.initialPulse) },
     { label: 'CP', value: fmtCP(log.initialCP), highlight: true },
-    { label: 'RB', value: fmtDuration(log.rb1Duration) },
-    { label: log.intermediateType, value: fmtCP(log.intermediateValue), highlight: true },
-    { label: 'RB', value: fmtDuration(log.rb2Duration) },
-    { label: 'CP', value: fmtCP(log.finalCP), highlight: true },
+    ...log.blocks.flatMap(block => [
+      { label: 'RB', value: fmtDuration(block.rbDuration) },
+      { label: block.pauseType, value: fmtCP(block.pauseValue), highlight: true },
+    ]),
     { label: 'P', value: String(log.finalPulse) },
   ];
+
+  // Up to the standard seven cells stay on one line; longer sets split evenly
+  // across two so nothing is squeezed to an unreadable width.
+  const columns = cells.length <= 7 ? cells.length : Math.ceil(cells.length / 2);
+  const fillers = (columns - (cells.length % columns)) % columns;
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -54,10 +59,15 @@ export const LogCard: React.FC<LogCardProps> = ({ log, onDelete }) => {
         </button>
       </div>
 
-      {/* Worksheet row: P / CP / RB / CP·EP / RB / CP / P */}
-      <div className="flex divide-x divide-gray-100 px-1 py-1">
+      {/* Worksheet row: P / CP / (RB / CP·EP) × n / P.
+          Sets too long for one row are split over two rather than squeezed;
+          the 1px gaps over a grey backing draw the dividers. */}
+      <div
+        className="grid gap-px bg-gray-100"
+        style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
+      >
         {cells.map((cell, i) => (
-          <div key={i} className="flex-1 flex flex-col items-center py-2 px-1 min-w-0">
+          <div key={i} className="bg-white flex flex-col items-center py-2.5 px-1 min-w-0">
             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5 truncate md:text-xs">
               {cell.label}
             </span>
@@ -65,6 +75,10 @@ export const LogCard: React.FC<LogCardProps> = ({ log, onDelete }) => {
               {cell.value}
             </span>
           </div>
+        ))}
+        {/* Keeps the tail of a wrapped row white rather than showing the backing */}
+        {Array.from({ length: fillers }, (_, i) => (
+          <div key={`filler-${i}`} className="bg-white" />
         ))}
       </div>
 

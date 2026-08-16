@@ -1,42 +1,55 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useLogs } from '@/hooks/useLogs';
+import { useFormat } from '@/hooks/useFormat';
 import { Timer } from '@/components/Timer';
-import { Save, X, Bluetooth, Loader2 } from 'lucide-react';
-import { Session } from '@/types';
-import { useHeartRate } from '@/hooks/useHeartRate';
+import { PulseInput } from '@/components/PulseInput';
+import { Save, Settings2, X } from 'lucide-react';
+import { PauseType, Session, SessionBlock, SessionFormat } from '@/types';
+import { blocksForFormat, describeFormat, fmtDuration } from '@/lib/format';
 
-const STEPS = [
-  'INITIAL_PULSE',
-  'INITIAL_CP',
-  'RB_1',
-  'INTERMEDIATE_TYPE',
-  'INTERMEDIATE_VALUE',
-  'RB_2',
-  'FINAL_CP',
-  'FINAL_PULSE',
-  'NOTES',
-] as const;
+type Step =
+  | { kind: 'INITIAL_PULSE' }
+  | { kind: 'INITIAL_CP' }
+  | { kind: 'RB'; block: number }
+  | { kind: 'REST'; block: number }
+  | { kind: 'PAUSE_TYPE'; block: number }
+  | { kind: 'PAUSE'; block: number }
+  | { kind: 'FINAL_PULSE' }
+  | { kind: 'NOTES' };
 
-type Step = typeof STEPS[number];
+/**
+ * P / CP / (RB / rest / CP·EP) × n / P. The pause closing the last block is
+ * always a CP, so only the earlier blocks ask which kind of pause to take.
+ */
+function buildSteps(format: SessionFormat): Step[] {
+  const steps: Step[] = [{ kind: 'INITIAL_PULSE' }, { kind: 'INITIAL_CP' }];
+  for (let block = 0; block < format.blocks; block++) {
+    steps.push({ kind: 'RB', block });
+    if (format.restDuration > 0) steps.push({ kind: 'REST', block });
+    if (block < format.blocks - 1) steps.push({ kind: 'PAUSE_TYPE', block });
+    steps.push({ kind: 'PAUSE', block });
+  }
+  steps.push({ kind: 'FINAL_PULSE' }, { kind: 'NOTES' });
+  return steps;
+}
 
-// Maps each step to its position in the P/CP/RB/CP/RB/CP/P sequence (0-indexed, -1 = outside sequence)
-const STEP_TO_SEQ: Record<Step, number> = {
-  INITIAL_PULSE: 0,
-  INITIAL_CP: 1,
-  RB_1: 2,
-  INTERMEDIATE_TYPE: 3,
-  INTERMEDIATE_VALUE: 3,
-  RB_2: 4,
-  FINAL_CP: 5,
-  FINAL_PULSE: 6,
-  NOTES: -1,
-};
-const SEQUENCE_LABELS = ['P', 'CP', 'RB', 'CP/EP', 'RB', 'CP', 'P'];
-
-const RB_DURATION = 600; // 10 minutes
+/** Position of a step in the P / CP / RB / … / P indicator (-1 = outside the sequence). */
+function seqIndexOf(step: Step, blockCount: number): number {
+  switch (step.kind) {
+    case 'INITIAL_PULSE': return 0;
+    case 'INITIAL_CP': return 1;
+    case 'RB':
+    case 'REST': return 2 + step.block * 2;
+    case 'PAUSE_TYPE':
+    case 'PAUSE': return 3 + step.block * 2;
+    case 'FINAL_PULSE': return 2 + blockCount * 2;
+    case 'NOTES': return -1;
+  }
+}
 
 const RB_TIPS = [
   'Breathe gently through your nose, keeping the volume slightly smaller than feels natural. Your breathing should be quiet and barely visible.',
@@ -54,46 +67,82 @@ const RB_TIPS = [
 export default function NewSessionPage() {
   const router = useRouter();
   const { saveLog } = useLogs();
+  const { format: savedFormat, isLoaded } = useFormat();
+
+  if (!isLoaded) return null;
+  return <SessionFlow format={savedFormat} onExit={() => router.push('/')} onSaved={() => router.push('/')} saveLog={saveLog} />;
+}
+
+interface SessionFlowProps {
+  format: SessionFormat;
+  saveLog: (session: Session) => void;
+  onExit: () => void;
+  onSaved: () => void;
+}
+
+function SessionFlow({ format: initialFormat, saveLog, onExit, onSaved }: SessionFlowProps) {
+  // Pinned at mount: changing the format mid-session would reshuffle the steps
+  // underneath whatever has already been recorded.
+  const [format] = useState(initialFormat);
+  const steps = useMemo(() => buildSteps(format), [format]);
+
   const [currentStep, setCurrentStep] = useState(0);
-  const [session, setSession] = useState<Partial<Session>>({
-    intermediateType: 'CP',
-    rb1Duration: RB_DURATION,
-    rb2Duration: RB_DURATION,
-  });
+  const [initialPulse, setInitialPulse] = useState<number | undefined>();
+  const [finalPulse, setFinalPulse] = useState<number | undefined>();
+  const [initialCP, setInitialCP] = useState(0);
+  const [notes, setNotes] = useState('');
+  const [blocks, setBlocks] = useState<SessionBlock[]>(() => blocksForFormat(format));
 
-  const stepName = STEPS[currentStep];
-  const seqIndex = STEP_TO_SEQ[stepName];
+  const step = steps[currentStep];
+  const seqIndex = seqIndexOf(step, format.blocks);
 
-  const next = () => setCurrentStep(s => Math.min(s + 1, STEPS.length - 1));
+  const next = () => setCurrentStep(s => Math.min(s + 1, steps.length - 1));
   const back = () => setCurrentStep(s => Math.max(s - 1, 0));
 
+  const updateBlock = (index: number, patch: Partial<SessionBlock>) =>
+    setBlocks(bs => bs.map((b, i) => (i === index ? { ...b, ...patch } : b)));
+
+  // A block's pause shows as "CP/EP" until its type has been picked, then as
+  // whichever was chosen.
+  const typeDecided = (block: number) =>
+    currentStep >= steps.findIndex(s => s.kind === 'PAUSE' && s.block === block);
+
+  const sequenceLabels = [
+    'P',
+    'CP',
+    ...blocks.flatMap((block, i) => [
+      'RB',
+      typeDecided(i) || i === blocks.length - 1 ? block.pauseType : 'CP/EP',
+    ]),
+    'P',
+  ];
+
   const handleSave = () => {
-    const fullSession: Session = {
+    saveLog({
       id: Date.now().toString(),
       timestamp: Date.now(),
-      initialPulse: session.initialPulse ?? 0,
-      initialCP: session.initialCP ?? 0,
-      rb1Duration: session.rb1Duration ?? RB_DURATION,
-      intermediateType: session.intermediateType ?? 'CP',
-      intermediateValue: session.intermediateValue ?? 0,
-      rb2Duration: session.rb2Duration ?? RB_DURATION,
-      finalCP: session.finalCP ?? 0,
-      finalPulse: session.finalPulse ?? 0,
-      notes: session.notes ?? '',
-    };
-    saveLog(fullSession);
-    router.push('/');
+      initialPulse: initialPulse ?? 0,
+      initialCP,
+      blocks,
+      finalPulse: finalPulse ?? 0,
+      notes,
+    });
+    onSaved();
   };
 
+  const blockLabel = (index: number) =>
+    format.blocks > 1 ? ` (${index + 1} of ${format.blocks})` : '';
+
   const renderStep = () => {
-    switch (stepName) {
+    switch (step.kind) {
       case 'INITIAL_PULSE':
         return (
           <PulseInput
+            key="initial-pulse"
             label="Initial Pulse"
-            value={session.initialPulse}
-            onChange={v => setSession(s => ({ ...s, initialPulse: v }))}
-            onNext={() => next()}
+            value={initialPulse}
+            onChange={setInitialPulse}
+            onNext={next}
           />
         );
       case 'INITIAL_CP':
@@ -105,105 +154,111 @@ export default function NewSessionPage() {
             animate="hold"
             allowManualEntry
             instructions="After a normal exhale, pinch your nose. Time until the first gentle urge to breathe — don't push through discomfort."
-            onComplete={v => { setSession(s => ({ ...s, initialCP: v })); next(); }}
+            onComplete={v => { setInitialCP(v); next(); }}
           />
         );
-      case 'RB_1':
+      case 'RB': {
+        const index = step.block;
         return (
           <Timer
-            key="rb-1"
-            label="Reduced Breathing"
+            key={`rb-${index}`}
+            label={`Reduced Breathing${blockLabel(index)}`}
             mode="countdown"
-            targetSeconds={RB_DURATION}
+            targetSeconds={format.rbDuration}
             animate="breathe"
             tips={RB_TIPS}
             allowManualEntry
-            onComplete={v => { setSession(s => ({ ...s, rb1Duration: v })); next(); }}
+            onComplete={v => { updateBlock(index, { rbDuration: v }); next(); }}
           />
         );
-      case 'INTERMEDIATE_TYPE':
+      }
+      case 'REST':
+        return (
+          <Timer
+            key={`rest-${step.block}`}
+            label="Regular Breathing"
+            mode="countdown"
+            targetSeconds={format.restDuration}
+            animate="rest"
+            autoStart
+            stopLabel="Skip"
+            instructions="Let your breathing return to normal before the next pause."
+            onComplete={next}
+          />
+        );
+      case 'PAUSE_TYPE': {
+        const index = step.block;
         return (
           <div className="flex flex-col items-center w-full">
             <h2 className="text-2xl font-bold text-gray-800 mb-2 md:text-3xl">Pause Type</h2>
-            <p className="text-sm text-gray-500 mb-8 text-center md:text-base">Select the type of pause for this exercise set</p>
+            <p className="text-sm text-gray-500 mb-8 text-center md:text-base">
+              Select the type of pause for this exercise set
+            </p>
             <div className="grid grid-cols-2 gap-4 w-full">
-              <button
-                onClick={() => { setSession(s => ({ ...s, intermediateType: 'CP' })); next(); }}
-                className="p-8 rounded-2xl border-2 border-blue-200 bg-blue-50 font-bold text-2xl text-blue-700 active:scale-95 transition-transform hover:border-blue-400 md:text-3xl md:p-10"
-              >
-                CP
-                <p className="text-xs font-normal text-blue-500 mt-1 md:text-sm">Control Pause</p>
-              </button>
-              <button
-                onClick={() => { setSession(s => ({ ...s, intermediateType: 'EP' })); next(); }}
-                className="p-8 rounded-2xl border-2 border-gray-200 font-bold text-2xl text-gray-600 active:scale-95 transition-transform hover:border-gray-400 md:text-3xl md:p-10"
-              >
-                EP
-                <p className="text-xs font-normal text-gray-500 mt-1 md:text-sm">Extended Pause</p>
-              </button>
+              {(['CP', 'EP'] as PauseType[]).map(type => (
+                <button
+                  key={type}
+                  onClick={() => { updateBlock(index, { pauseType: type }); next(); }}
+                  className={`p-8 rounded-2xl border-2 font-bold text-2xl active:scale-95 transition-transform md:text-3xl md:p-10 ${
+                    blocks[index].pauseType === type
+                      ? 'border-blue-200 bg-blue-50 text-blue-700 hover:border-blue-400'
+                      : 'border-gray-200 text-gray-600 hover:border-gray-400'
+                  }`}
+                >
+                  {type}
+                  <p className={`text-xs font-normal mt-1 md:text-sm ${
+                    blocks[index].pauseType === type ? 'text-blue-500' : 'text-gray-500'
+                  }`}>
+                    {type === 'CP' ? 'Control Pause' : 'Extended Pause'}
+                  </p>
+                </button>
+              ))}
             </div>
           </div>
         );
-      case 'INTERMEDIATE_VALUE':
+      }
+      case 'PAUSE': {
+        const index = step.block;
+        const isFinal = index === blocks.length - 1;
+        const type = isFinal ? 'CP' : blocks[index].pauseType;
         return (
           <Timer
-            key="intermediate-value"
-            label={`${session.intermediateType} Pause`}
+            key={`pause-${index}`}
+            label={isFinal ? 'Final Control Pause' : `${type} Pause`}
             mode="stopwatch"
             animate="hold"
             allowManualEntry
             instructions={
-              session.intermediateType === 'EP'
+              type === 'EP'
                 ? 'After exhaling, hold until you feel a medium-strong air hunger — noticeably more discomfort than a CP.'
-                : 'After a normal exhale, pinch your nose and hold until the first urge to breathe.'
+                : 'After a normal exhale, pinch your nose and hold until the first gentle urge to breathe.'
             }
-            onComplete={v => { setSession(s => ({ ...s, intermediateValue: v })); next(); }}
+            onComplete={v => { updateBlock(index, { pauseType: type, pauseValue: v }); next(); }}
           />
         );
-      case 'RB_2':
-        return (
-          <Timer
-            key="rb-2"
-            label="Reduced Breathing"
-            mode="countdown"
-            targetSeconds={RB_DURATION}
-            animate="breathe"
-            tips={RB_TIPS}
-            allowManualEntry
-            onComplete={v => { setSession(s => ({ ...s, rb2Duration: v })); next(); }}
-          />
-        );
-      case 'FINAL_CP':
-        return (
-          <Timer
-            key="final-cp"
-            label="Final Control Pause"
-            mode="stopwatch"
-            animate="hold"
-            allowManualEntry
-            instructions="After a normal exhale, pinch your nose and hold until the first gentle urge to breathe."
-            onComplete={v => { setSession(s => ({ ...s, finalCP: v })); next(); }}
-          />
-        );
+      }
       case 'FINAL_PULSE':
         return (
           <PulseInput
+            key="final-pulse"
             label="Final Pulse"
-            value={session.finalPulse}
-            onChange={v => setSession(s => ({ ...s, finalPulse: v }))}
-            onNext={() => next()}
+            value={finalPulse}
+            onChange={setFinalPulse}
+            onNext={next}
           />
         );
       case 'NOTES':
         return (
           <div className="flex flex-col items-center w-full">
             <h2 className="text-2xl font-bold text-gray-800 mb-2 md:text-3xl">Notes</h2>
-            <p className="text-sm text-gray-500 mb-6 text-center md:text-base">Medication, physical condition, anything notable</p>
+            <p className="text-sm text-gray-500 mb-6 text-center md:text-base">
+              Medication, physical condition, anything notable
+            </p>
             <textarea
               className="w-full h-32 p-4 border-2 border-gray-200 rounded-2xl mb-6 focus:border-blue-500 outline-none resize-none text-gray-700 md:h-40 md:text-base"
-              placeholder="e.g. RB 10 mins @ 18:00, felt congested..."
-              defaultValue={session.notes}
-              onChange={e => setSession(s => ({ ...s, notes: e.target.value }))}
+              placeholder={`e.g. RB ${fmtDuration(format.rbDuration)} @ 18:00, felt congested...`}
+              defaultValue={notes}
+              onChange={e => setNotes(e.target.value)}
             />
             <button
               onClick={handleSave}
@@ -221,21 +276,21 @@ export default function NewSessionPage() {
       <div className="max-w-md mx-auto md:max-w-xl">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
-          <button onClick={() => router.push('/')} className="p-2 text-gray-400 hover:text-gray-600">
+          <button onClick={onExit} className="p-2 text-gray-400 hover:text-gray-600" aria-label="Close">
             <X size={24} />
           </button>
           <span className="text-sm font-semibold text-gray-500 md:text-base">
-            {currentStep + 1} / {STEPS.length}
+            {currentStep + 1} / {steps.length}
           </span>
           <div className="w-10" />
         </div>
 
         {/* Sequence indicator */}
         {seqIndex >= 0 && (
-          <div className="flex items-center justify-between mb-6 px-1">
-            {SEQUENCE_LABELS.map((label, i) => (
+          <div className="flex items-center mb-6 px-1 overflow-x-auto">
+            {sequenceLabels.map((label, i) => (
               <React.Fragment key={i}>
-                <div className="flex flex-col items-center gap-1">
+                <div className="flex flex-col items-center gap-1 shrink-0">
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors md:w-10 md:h-10 md:text-sm ${
                       i < seqIndex
@@ -251,8 +306,8 @@ export default function NewSessionPage() {
                     {label}
                   </span>
                 </div>
-                {i < SEQUENCE_LABELS.length - 1 && (
-                  <div className={`flex-1 h-px mx-1 ${i < seqIndex ? 'bg-blue-200' : 'bg-gray-200'}`} />
+                {i < sequenceLabels.length - 1 && (
+                  <div className={`flex-1 min-w-[8px] h-px mx-1 ${i < seqIndex ? 'bg-blue-200' : 'bg-gray-200'}`} />
                 )}
               </React.Fragment>
             ))}
@@ -264,83 +319,28 @@ export default function NewSessionPage() {
           {renderStep()}
         </div>
 
-        {/* Back button */}
-        {currentStep > 0 && stepName !== 'NOTES' && (
-          <div className="mt-6 flex justify-start">
+        {/* Footer: format summary on the first step, back button after that */}
+        <div className="mt-6 flex justify-between items-center gap-4">
+          {currentStep > 0 && step.kind !== 'NOTES' ? (
             <button
               onClick={back}
               className="text-sm text-gray-400 hover:text-gray-600 font-medium md:text-base"
             >
               ← Back
             </button>
-          </div>
-        )}
+          ) : (
+            <div />
+          )}
+          {currentStep === 0 && (
+            <Link
+              href="/settings"
+              className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 font-medium md:text-sm"
+            >
+              <Settings2 size={14} /> {describeFormat(format)}
+            </Link>
+          )}
+        </div>
       </div>
-    </div>
-  );
-}
-
-interface PulseInputProps {
-  label: string;
-  value?: number;
-  onChange: (v: number) => void;
-  onNext: () => void;
-}
-
-function PulseInput({ label, value, onChange, onNext }: PulseInputProps) {
-  const { read, state, isSupported, clearError } = useHeartRate();
-  const isBusy = state.status === 'connecting' || state.status === 'reading';
-
-  const handleBluetooth = async () => {
-    const bpm = await read();
-    if (bpm !== null) onChange(bpm);
-  };
-
-  return (
-    <div className="flex flex-col items-center w-full">
-      <h2 className="text-2xl font-bold text-gray-800 mb-2 md:text-3xl">{label}</h2>
-      <p className="text-sm text-gray-500 mb-6 text-center md:text-base">Beats per minute</p>
-
-      <input
-        type="number"
-        inputMode="numeric"
-        min={30}
-        max={220}
-        className="text-5xl w-36 py-4 text-center border-2 border-blue-300 rounded-2xl mb-4 font-mono font-bold text-gray-800 focus:border-blue-500 outline-none md:text-6xl md:w-44 md:py-5"
-        placeholder="–"
-        value={value ?? ''}
-        autoFocus
-        onChange={e => onChange(parseInt(e.target.value) || 0)}
-      />
-
-      {isSupported && (
-        <button
-          onClick={handleBluetooth}
-          disabled={isBusy}
-          className="flex items-center gap-2 text-sm text-blue-500 hover:text-blue-700 disabled:opacity-50 disabled:cursor-not-allowed mb-6 transition-colors md:text-base"
-        >
-          {isBusy
-            ? <><Loader2 size={15} className="animate-spin" /> {state.status === 'connecting' ? 'Connecting…' : 'Reading…'}</>
-            : <><Bluetooth size={15} /> Read from device</>
-          }
-        </button>
-      )}
-
-      {state.status === 'error' && (
-        <p className="text-xs text-red-500 mb-4 text-center max-w-xs">
-          {state.message}{' '}
-          <button onClick={clearError} className="underline">Dismiss</button>
-        </p>
-      )}
-
-      {!isSupported && <div className="mb-6" />}
-
-      <button
-        onClick={onNext}
-        className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold w-full hover:bg-blue-700 active:scale-95 transition-transform md:text-lg md:py-5"
-      >
-        Next
-      </button>
     </div>
   );
 }

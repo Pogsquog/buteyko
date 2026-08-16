@@ -1,7 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Play, Square, RotateCcw, Check, Keyboard, Timer as TimerIcon } from 'lucide-react';
+import { useTimer } from '@/hooks/useTimer';
+import { useWakeLock } from '@/hooks/useWakeLock';
+import { playAlarm, primeAlarm } from '@/lib/alarm';
 
 interface TimerProps {
   onComplete: (seconds: number) => void;
@@ -9,11 +12,18 @@ interface TimerProps {
   mode?: 'stopwatch' | 'countdown';
   targetSeconds?: number;
   instructions?: string;
-  animate?: 'breathe' | 'hold';
+  animate?: 'breathe' | 'hold' | 'rest';
   tips?: string[];
   /** Offer a numeric input as an alternative to running the on-screen timer */
   allowManualEntry?: boolean;
+  /** Start counting as soon as the step opens (used for the rest between exercises) */
+  autoStart?: boolean;
+  /** Label for the countdown's cut-it-short button */
+  stopLabel?: string;
 }
+
+/** Seconds per inhale / exhale in the pacing animation ≈ 6 breaths a minute. */
+const BREATH_PHASE_SECONDS = 5;
 
 export const Timer: React.FC<TimerProps> = ({
   onComplete,
@@ -24,79 +34,47 @@ export const Timer: React.FC<TimerProps> = ({
   animate,
   tips,
   allowManualEntry = false,
+  autoStart = false,
+  stopLabel = 'Stop',
 }) => {
-  const [elapsed, setElapsed] = useState(0);
-  const [isRunning, setIsRunning] = useState(false);
-  const [breathPhase, setBreathPhase] = useState<'inhale' | 'exhale'>('inhale');
   const [isManual, setIsManual] = useState(false);
   const [manualValue, setManualValue] = useState('');
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const breathRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  // Mirrors `elapsed` so the tick can decide to stop without re-creating itself
-  const elapsedRef = useRef(0);
 
-  const isComplete = mode === 'countdown' && elapsed >= targetSeconds;
+  const handleFinish = useCallback(() => playAlarm(), []);
+  const { elapsed, isRunning, isComplete, start, pause, reset, readNow } = useTimer({
+    mode,
+    targetSeconds,
+    onFinish: handleFinish,
+  });
 
-  // Breathing animation: 5 s per phase ≈ 6 breaths/min
+  useWakeLock(isRunning);
+
   useEffect(() => {
-    if (animate !== 'breathe' || !isRunning) return;
-    breathRef.current = setInterval(() => {
-      setBreathPhase(p => (p === 'inhale' ? 'exhale' : 'inhale'));
-    }, 5000);
-    return () => {
-      if (breathRef.current) clearInterval(breathRef.current);
-      breathRef.current = null;
-    };
-  }, [animate, isRunning]);
-
-  useEffect(() => () => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    if (breathRef.current) clearInterval(breathRef.current);
-  }, []);
-
-  const clearTick = () => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    intervalRef.current = null;
-  };
-
-  const tick = () => {
-    elapsedRef.current += 1;
-    setElapsed(elapsedRef.current);
-    if (mode === 'countdown' && elapsedRef.current >= targetSeconds) {
-      clearTick();
-      setIsRunning(false);
+    if (autoStart) {
+      primeAlarm();
+      start();
     }
-  };
+  }, [autoStart, start]);
+
+  // Derived from elapsed time rather than its own interval, so the pacer stays
+  // in step with the clock after the tab has been backgrounded.
+  const breathPhase =
+    isRunning && Math.floor(elapsed / BREATH_PHASE_SECONDS) % 2 === 1 ? 'exhale' : 'inhale';
 
   const toggle = () => {
     if (isComplete) return;
     if (isRunning) {
-      clearTick();
-      setIsRunning(false);
+      pause();
     } else {
-      setIsRunning(true);
-      setBreathPhase('inhale');
-      intervalRef.current = setInterval(tick, 1000);
+      primeAlarm();
+      start();
     }
   };
 
-  const stop = () => {
-    clearTick();
-    if (breathRef.current) clearInterval(breathRef.current);
-    breathRef.current = null;
-    setIsRunning(false);
-  };
-
-  const reset = () => {
-    stop();
-    elapsedRef.current = 0;
-    setElapsed(0);
-    setBreathPhase('inhale');
-  };
-
   const confirm = () => {
-    stop();
-    onComplete(elapsed);
+    const seconds = readNow();
+    pause();
+    onComplete(seconds);
   };
 
   // Holds are a handful of seconds; reduced breathing runs for minutes.
@@ -104,7 +82,7 @@ export const Timer: React.FC<TimerProps> = ({
   const toManualUnits = (seconds: number) => (manualInMinutes ? Math.round(seconds / 6) / 10 : seconds);
 
   const openManual = () => {
-    stop();
+    pause();
     // Prefill with whatever the timer already counted, else the target duration
     // for a countdown (the usual answer) or nothing at all for a hold.
     if (elapsed > 0) setManualValue(String(toManualUnits(elapsed)));
@@ -112,10 +90,7 @@ export const Timer: React.FC<TimerProps> = ({
     setIsManual(true);
   };
 
-  const closeManual = () => {
-    setIsManual(false);
-    setBreathPhase('inhale');
-  };
+  const closeManual = () => setIsManual(false);
 
   const manualNumber = parseFloat(manualValue);
   const manualSeconds = Number.isFinite(manualNumber)
@@ -205,7 +180,7 @@ export const Timer: React.FC<TimerProps> = ({
               className={`w-20 h-20 rounded-full bg-blue-50 border-2 border-blue-200 transition-transform ease-in-out ${
                 isRunning && breathPhase === 'inhale' ? 'scale-100' : 'scale-[0.55]'
               }`}
-              style={{ transitionDuration: '5000ms' }}
+              style={{ transitionDuration: `${BREATH_PHASE_SECONDS * 1000}ms` }}
             />
           </div>
           <p className="text-xs text-blue-400 mt-2 h-4 font-medium">
@@ -231,7 +206,22 @@ export const Timer: React.FC<TimerProps> = ({
         </div>
       )}
 
-      {instructions && !animate && !isRunning && elapsed === 0 && (
+      {animate === 'rest' && (
+        <div className="flex flex-col items-center mb-3">
+          <div className={`w-14 h-14 rounded-full border-2 flex items-center justify-center transition-colors duration-700 ${
+            isRunning ? 'bg-emerald-50 border-emerald-200' : 'bg-gray-50 border-gray-200'
+          }`}>
+            <div className={`w-5 h-5 rounded-full transition-colors duration-700 ${
+              isRunning ? 'bg-emerald-300 animate-pulse' : 'bg-gray-200'
+            }`} />
+          </div>
+          <p className={`text-xs mt-2 h-4 font-medium transition-colors duration-700 ${isRunning ? 'text-emerald-500' : 'text-gray-400'}`}>
+            {isRunning ? 'breathe normally…' : 'let your breathing settle'}
+          </p>
+        </div>
+      )}
+
+      {instructions && (!animate || !isRunning) && elapsed === 0 && (
         <p className="text-sm text-gray-400 text-center mb-3 max-w-xs leading-relaxed">{instructions}</p>
       )}
 
@@ -282,9 +272,9 @@ export const Timer: React.FC<TimerProps> = ({
             <button
               onClick={confirm}
               className="p-4 rounded-2xl bg-gray-200 text-gray-500 hover:bg-gray-300 transition-colors text-xs font-semibold md:p-5 md:text-sm"
-              title="Stop early"
+              title={`${stopLabel} early`}
             >
-              Stop
+              {stopLabel}
             </button>
           )}
         </div>

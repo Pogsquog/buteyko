@@ -2,6 +2,7 @@
 
 import { useCallback, useSyncExternalStore } from 'react';
 import { LogEntry } from '../types';
+import { normalizeLogs } from '@/lib/session';
 
 const STORAGE_KEY = 'buteyko_logs';
 const EMPTY: LogEntry[] = [];
@@ -22,7 +23,9 @@ function getLogs(): LogEntry[] {
     cachedLogs = EMPTY;
   } else {
     try {
-      cachedLogs = JSON.parse(raw);
+      // Sessions saved before the format became configurable are upgraded on
+      // read, so old logs keep displaying alongside new ones.
+      cachedLogs = normalizeLogs(JSON.parse(raw));
     } catch (e) {
       console.error('Failed to parse logs', e);
       cachedLogs = EMPTY;

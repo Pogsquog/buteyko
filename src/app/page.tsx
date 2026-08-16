@@ -1,10 +1,11 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useLogs } from '@/hooks/useLogs';
 import { LogCard } from '@/components/LogCard';
-import { Plus, Activity, Wind } from 'lucide-react';
+import { Plus, Activity, Settings2, Wind } from 'lucide-react';
 
 export default function Home() {
   const router = useRouter();
@@ -22,12 +23,21 @@ export default function Home() {
             </div>
             <h1 className="text-2xl font-bold text-gray-800 md:text-3xl">Buteyko</h1>
           </div>
-          <button
-            onClick={() => router.push('/new-session')}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-md transition-transform active:scale-95 flex items-center gap-2 text-sm md:text-base md:px-6 md:py-3"
-          >
-            <Plus size={18} /> New Session
-          </button>
+          <div className="flex items-center gap-1">
+            <Link
+              href="/settings"
+              className="p-2.5 text-gray-400 hover:text-gray-600 transition-colors"
+              aria-label="Exercise set format"
+            >
+              <Settings2 size={22} />
+            </Link>
+            <button
+              onClick={() => router.push('/new-session')}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-md transition-transform active:scale-95 flex items-center gap-2 text-sm md:text-base md:px-6 md:py-3"
+            >
+              <Plus size={18} /> New Session
+            </button>
+          </div>
         </div>
       </header>
 
