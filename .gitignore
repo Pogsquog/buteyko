@@ -46,3 +46,8 @@ next-env.d.ts
 *.png
 !public/*.png
 !public/*.svg
+
+# service worker bundles, if a generator is ever reintroduced
+# (public/sw.js itself is hand-written and *is* tracked)
+/public/workbox-*.js
+/public/sw.js.map

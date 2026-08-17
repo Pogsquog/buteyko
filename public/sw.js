@@ -1,1 +1,113 @@
-if(!self.define){let e,s={};const a=(a,n)=>(a=new URL(a+".js",n).href,s[a]||new Promise(s=>{if("document"in self){const e=document.createElement("script");e.src=a,e.onload=s,document.head.appendChild(e)}else e=a,importScripts(a),s()}).then(()=>{let e=s[a];if(!e)throw new Error(`Module ${a} didn’t register its module`);return e}));self.define=(n,t)=>{const i=e||("document"in self?document.currentScript.src:"")||location.href;if(s[i])return;let c={};const o=e=>a(e,i),f={module:{uri:i},exports:c,require:o};s[i]=Promise.all(n.map(e=>f[e]||o(e))).then(e=>(t(...e),c))}}define(["./workbox-4754cb34"],function(e){"use strict";importScripts(),self.skipWaiting(),e.clientsClaim(),e.precacheAndRoute([{url:"/_next/static/VXXwUxxdj7CAoP6GWHrFO/_buildManifest.js",revision:"2a11e0c4806131afa4f77ba7922eca57"},{url:"/_next/static/VXXwUxxdj7CAoP6GWHrFO/_ssgManifest.js",revision:"b6652df95db52feb4daf4eca35380933"},{url:"/_next/static/chunks/4bd1b696-215e5051988c3dde.js",revision:"215e5051988c3dde"},{url:"/_next/static/chunks/794-307f158afcf5cb52.js",revision:"307f158afcf5cb52"},{url:"/_next/static/chunks/app/_global-error/page-aba28f88d5781771.js",revision:"aba28f88d5781771"},{url:"/_next/static/chunks/app/_not-found/page-ccab562ffa22378e.js",revision:"ccab562ffa22378e"},{url:"/_next/static/chunks/app/layout-b89c7ec5e5167f03.js",revision:"b89c7ec5e5167f03"},{url:"/_next/static/chunks/app/new-session/page-d12ca0120eeb46b8.js",revision:"d12ca0120eeb46b8"},{url:"/_next/static/chunks/app/page-05a741ded9559487.js",revision:"05a741ded9559487"},{url:"/_next/static/chunks/framework-93cda6578f6c76ec.js",revision:"93cda6578f6c76ec"},{url:"/_next/static/chunks/main-6415bb8ae17a67f4.js",revision:"6415bb8ae17a67f4"},{url:"/_next/static/chunks/main-app-bd3ec28ffa061bd0.js",revision:"bd3ec28ffa061bd0"},{url:"/_next/static/chunks/next/dist/client/components/builtin/app-error-aba28f88d5781771.js",revision:"aba28f88d5781771"},{url:"/_next/static/chunks/next/dist/client/components/builtin/forbidden-aba28f88d5781771.js",revision:"aba28f88d5781771"},{url:"/_next/static/chunks/next/dist/client/components/builtin/global-error-d2dbf58c48cadf31.js",revision:"d2dbf58c48cadf31"},{url:"/_next/static/chunks/next/dist/client/components/builtin/not-found-aba28f88d5781771.js",revision:"aba28f88d5781771"},{url:"/_next/static/chunks/next/dist/client/components/builtin/unauthorized-aba28f88d5781771.js",revision:"aba28f88d5781771"},{url:"/_next/static/chunks/polyfills-42372ed130431b0a.js",revision:"846118c33b2c0e922d7b3a7676f81f6f"},{url:"/_next/static/chunks/webpack-e9ea3638f557ed04.js",revision:"e9ea3638f557ed04"},{url:"/_next/static/css/c788b38d305ac1b0.css",revision:"c788b38d305ac1b0"},{url:"/_next/static/media/013b72fa676f92e0-s.woff2",revision:"bc06a1ea50382b6956e53aeb91c889c1"},{url:"/_next/static/media/22a5144ee8d83bca-s.p.woff2",revision:"f4634c3bc1fa7cb53247e1f2872adb5a"},{url:"/_next/static/media/2b5b02fc7e511755-s.woff2",revision:"a27466d069120e75e25b4fd06edd5be2"},{url:"/_next/static/media/65f03d54ccadf4a8-s.woff2",revision:"58bcf4f276e0844890901b91c411447c"},{url:"/_next/static/media/7d4881bb7e1bf84d-s.p.woff2",revision:"cd5b25781181c5c03d99ac2cbf88016a"},{url:"/_next/static/media/9766a7e9e2e0ad5a-s.woff2",revision:"9a45f5a5937490fac6d4f5043a36c125"},{url:"/_next/static/media/aa016aab0e6d1295-s.woff2",revision:"49215a3bccaeb5d483f4cf8fceb24776"},{url:"/_next/static/media/b66cf8e69499582a-s.woff2",revision:"dea7cff2e11a000dc4e0e913992f9c21"},{url:"/_next/static/media/b9408752a0c24fb9-s.woff2",revision:"c10faa6c8fbd7a47d8f00e75e82935cb"},{url:"/_next/static/media/e038a29029a234f2-s.woff2",revision:"42a21c981b367f31bd04683072dae1c1"},{url:"/_next/static/media/f639721981034f88-s.woff2",revision:"f4a75186954722ca80df35984adf581d"},{url:"/file.svg",revision:"d09f95206c3fa0bb9bd9fefabfd0ea71"},{url:"/globe.svg",revision:"2aaafa6a49b6563925fe440891e32717"},{url:"/manifest.json",revision:"7b8508c7b052f30458a591096d7e75ea"},{url:"/next.svg",revision:"8e061864f388b47f33a1c3780831193e"},{url:"/vercel.svg",revision:"c0af2f507b369b085b35ef4bbe3bcf1e"},{url:"/window.svg",revision:"a2760511c65806022ad20adf74370ff3"}],{ignoreURLParametersMatching:[]}),e.cleanupOutdatedCaches(),e.registerRoute("/",new e.NetworkFirst({cacheName:"start-url",plugins:[{cacheWillUpdate:async({request:e,response:s,event:a,state:n})=>s&&"opaqueredirect"===s.type?new Response(s.body,{status:200,statusText:"OK",headers:s.headers}):s}]}),"GET"),e.registerRoute(/^https:\/\/fonts\.(?:gstatic)\.com\/.*/i,new e.CacheFirst({cacheName:"google-fonts-webfonts",plugins:[new e.ExpirationPlugin({maxEntries:4,maxAgeSeconds:31536e3})]}),"GET"),e.registerRoute(/^https:\/\/fonts\.(?:googleapis)\.com\/.*/i,new e.StaleWhileRevalidate({cacheName:"google-fonts-stylesheets",plugins:[new e.ExpirationPlugin({maxEntries:4,maxAgeSeconds:604800})]}),"GET"),e.registerRoute(/\.(?:eot|otf|ttc|ttf|woff|woff2|font.css)$/i,new e.StaleWhileRevalidate({cacheName:"static-font-assets",plugins:[new e.ExpirationPlugin({maxEntries:4,maxAgeSeconds:604800})]}),"GET"),e.registerRoute(/\.(?:jpg|jpeg|gif|png|svg|ico|webp)$/i,new e.StaleWhileRevalidate({cacheName:"static-image-assets",plugins:[new e.ExpirationPlugin({maxEntries:64,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\/_next\/image\?url=.+$/i,new e.StaleWhileRevalidate({cacheName:"next-image",plugins:[new e.ExpirationPlugin({maxEntries:64,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\.(?:mp3|wav|ogg)$/i,new e.CacheFirst({cacheName:"static-audio-assets",plugins:[new e.RangeRequestsPlugin,new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\.(?:mp4)$/i,new e.CacheFirst({cacheName:"static-video-assets",plugins:[new e.RangeRequestsPlugin,new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\.(?:js)$/i,new e.StaleWhileRevalidate({cacheName:"static-js-assets",plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\.(?:css|less)$/i,new e.StaleWhileRevalidate({cacheName:"static-style-assets",plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\/_next\/data\/.+\/.+\.json$/i,new e.StaleWhileRevalidate({cacheName:"next-data",plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\.(?:json|xml|csv)$/i,new e.NetworkFirst({cacheName:"static-data-assets",plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(({url:e})=>{if(!(self.origin===e.origin))return!1;const s=e.pathname;return!s.startsWith("/api/auth/")&&!!s.startsWith("/api/")},new e.NetworkFirst({cacheName:"apis",networkTimeoutSeconds:10,plugins:[new e.ExpirationPlugin({maxEntries:16,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(({url:e})=>{if(!(self.origin===e.origin))return!1;return!e.pathname.startsWith("/api/")},new e.NetworkFirst({cacheName:"others",networkTimeoutSeconds:10,plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(({url:e})=>!(self.origin===e.origin),new e.NetworkFirst({cacheName:"cross-origin",networkTimeoutSeconds:10,plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:3600})]}),"GET")});
+/**
+ * Offline support for the tracker.
+ *
+ * This is written by hand rather than generated. The generated worker this
+ * replaced carried a precache manifest listing exact build hashes, which meant
+ * it went stale the moment anything was rebuilt — and every URL in it 404'd,
+ * which fails the install outright.
+ *
+ * Nothing here names a build artefact, so it stays correct across deploys:
+ *
+ *  - `/_next/static/*` is content-hashed and therefore immutable: serve from
+ *    cache, fall back to the network, and keep whatever comes back.
+ *  - Navigations go to the network first so a fresh deploy is picked up
+ *    immediately, falling back to the cached page (and finally the cached
+ *    start page) when offline.
+ *  - Everything else same-origin is stale-while-revalidate.
+ *
+ * Bump CACHE_VERSION to evict every cache on the next activation.
+ */
+
+const CACHE_VERSION = 'v1';
+const ASSET_CACHE = `buteyko-assets-${CACHE_VERSION}`;
+const PAGE_CACHE = `buteyko-pages-${CACHE_VERSION}`;
+const CURRENT_CACHES = [ASSET_CACHE, PAGE_CACHE];
+
+// The app shell. These are stable paths, not build artefacts, so precaching
+// them cannot rot; a failure here must not block installation either.
+const START_URL = '/';
+const PRECACHE_URLS = [START_URL, '/manifest.webmanifest', '/icon-192x192.png'];
+
+self.addEventListener('install', event => {
+  event.waitUntil(
+    (async () => {
+      const cache = await caches.open(PAGE_CACHE);
+      await Promise.allSettled(PRECACHE_URLS.map(url => cache.add(url)));
+      await self.skipWaiting();
+    })(),
+  );
+});
+
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    (async () => {
+      const names = await caches.keys();
+      await Promise.all(
+        names.filter(name => !CURRENT_CACHES.includes(name)).map(name => caches.delete(name)),
+      );
+      await self.clients.claim();
+    })(),
+  );
+});
+
+/** Cache-first: for immutable, content-hashed assets. */
+async function cacheFirst(request, cacheName) {
+  const cache = await caches.open(cacheName);
+  const cached = await cache.match(request);
+  if (cached) return cached;
+
+  const response = await fetch(request);
+  if (response.ok) cache.put(request, response.clone());
+  return response;
+}
+
+/** Network-first: for pages, so a new deploy shows up straight away. */
+async function networkFirst(request, cacheName) {
+  const cache = await caches.open(cacheName);
+  try {
+    const response = await fetch(request);
+    if (response.ok) cache.put(request, response.clone());
+    return response;
+  } catch (e) {
+    const cached = await cache.match(request);
+    if (cached) return cached;
+    if (request.mode === 'navigate') {
+      const start = await cache.match(START_URL);
+      if (start) return start;
+    }
+    throw e;
+  }
+}
+
+/** Stale-while-revalidate: for everything else same-origin. */
+async function staleWhileRevalidate(request, cacheName) {
+  const cache = await caches.open(cacheName);
+  const cached = await cache.match(request);
+  const network = fetch(request)
+    .then(response => {
+      if (response.ok) cache.put(request, response.clone());
+      return response;
+    })
+    .catch(() => cached);
+  return cached ?? network;
+}
+
+self.addEventListener('fetch', event => {
+  const { request } = event;
+  if (request.method !== 'GET') return;
+
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return; // let cross-origin requests alone
+
+  if (request.mode === 'navigate') {
+    event.respondWith(networkFirst(request, PAGE_CACHE));
+    return;
+  }
+
+  if (url.pathname.startsWith('/_next/static/')) {
+    event.respondWith(cacheFirst(request, ASSET_CACHE));
+    return;
+  }
+
+  event.respondWith(staleWhileRevalidate(request, ASSET_CACHE));
+});
