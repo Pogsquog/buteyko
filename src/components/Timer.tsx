@@ -5,6 +5,8 @@ import { Play, Square, RotateCcw, Check, Keyboard, Timer as TimerIcon } from 'lu
 import { useTimer } from '@/hooks/useTimer';
 import { useWakeLock } from '@/hooks/useWakeLock';
 import { playAlarm, primeAlarm } from '@/lib/alarm';
+import { fmtClock } from '@/lib/time';
+import { BREATH_PHASE_SECONDS, BreathPacer, PulsePhase } from '@/components/TimerPhase';
 
 interface TimerProps {
   onComplete: (seconds: number) => void;
@@ -22,8 +24,13 @@ interface TimerProps {
   stopLabel?: string;
 }
 
-/** Seconds per inhale / exhale in the pacing animation ≈ 6 breaths a minute. */
-const BREATH_PHASE_SECONDS = 5;
+/**
+ * Bounds for a typed-in time. The `max` attribute on a number input is only a
+ * hint — the browser will not stop anyone typing 500 — so the same limits are
+ * enforced here before the value can be recorded.
+ */
+const MANUAL_MAX_MINUTES = 120;
+const MANUAL_MAX_SECONDS = 600;
 
 export const Timer: React.FC<TimerProps> = ({
   onComplete,
@@ -79,6 +86,7 @@ export const Timer: React.FC<TimerProps> = ({
 
   // Holds are a handful of seconds; reduced breathing runs for minutes.
   const manualInMinutes = mode === 'countdown';
+  const manualMax = manualInMinutes ? MANUAL_MAX_MINUTES : MANUAL_MAX_SECONDS;
   const toManualUnits = (seconds: number) => (manualInMinutes ? Math.round(seconds / 6) / 10 : seconds);
 
   const openManual = () => {
@@ -96,20 +104,19 @@ export const Timer: React.FC<TimerProps> = ({
   const manualSeconds = Number.isFinite(manualNumber)
     ? Math.round(manualInMinutes ? manualNumber * 60 : manualNumber)
     : 0;
-  const manualIsValid = manualSeconds > 0;
+  // Out-of-range values are refused rather than quietly clamped: this is a
+  // measurement, and recording a number the user did not type would be worse
+  // than making them retype it.
+  const manualIsValid =
+    Number.isFinite(manualNumber) && manualNumber > 0 && manualNumber <= manualMax;
+  const manualIsTooLarge = Number.isFinite(manualNumber) && manualNumber > manualMax;
 
   const submitManual = () => {
     if (!manualIsValid) return;
     onComplete(manualSeconds);
   };
 
-  const fmt = (s: number) => {
-    const m = Math.floor(s / 60);
-    const sec = s % 60;
-    return `${m}:${sec.toString().padStart(2, '0')}`;
-  };
-
-  const display = mode === 'countdown' ? fmt(Math.max(0, targetSeconds - elapsed)) : fmt(elapsed);
+  const display = mode === 'countdown' ? fmtClock(Math.max(0, targetSeconds - elapsed)) : fmtClock(elapsed);
   const progress = mode === 'countdown' ? Math.min(100, (elapsed / targetSeconds) * 100) : null;
   const currentTip = tips && tips.length > 0 && isRunning
     ? tips[Math.floor(elapsed / 60) % tips.length]
@@ -125,13 +132,14 @@ export const Timer: React.FC<TimerProps> = ({
             : 'Enter the time you held for, in seconds'}
         </p>
 
-        <div className="flex items-baseline gap-2 mb-6">
+        <div className="flex items-baseline gap-2 mb-2">
           <input
             type="number"
             inputMode={manualInMinutes ? 'decimal' : 'numeric'}
             min={0}
-            max={manualInMinutes ? 120 : 600}
+            max={manualMax}
             step={manualInMinutes ? 0.5 : 1}
+            aria-label={manualInMinutes ? 'Minutes practised' : 'Seconds held'}
             className="text-5xl w-36 py-4 text-center border-2 border-blue-300 rounded-2xl font-mono font-bold text-gray-800 focus:border-blue-500 outline-none md:text-6xl md:w-44 md:py-5"
             placeholder="–"
             value={manualValue}
@@ -141,6 +149,10 @@ export const Timer: React.FC<TimerProps> = ({
           />
           <span className="text-lg font-semibold text-gray-400 md:text-xl">{manualInMinutes ? 'min' : 's'}</span>
         </div>
+
+        <p className="h-8 text-xs text-red-500 text-center flex items-center">
+          {manualIsTooLarge && `That is more than ${manualMax} ${manualInMinutes ? 'minutes' : 'seconds'}.`}
+        </p>
 
         <button
           onClick={submitManual}
@@ -173,59 +185,19 @@ export const Timer: React.FC<TimerProps> = ({
         </div>
       )}
 
-      {animate === 'breathe' && (
-        <div className="flex flex-col items-center mb-3">
-          <div className="w-20 h-20 flex items-center justify-center">
-            <div
-              className={`w-20 h-20 rounded-full bg-blue-50 border-2 border-blue-200 transition-transform ease-in-out ${
-                isRunning && breathPhase === 'inhale' ? 'scale-100' : 'scale-[0.55]'
-              }`}
-              style={{ transitionDuration: `${BREATH_PHASE_SECONDS * 1000}ms` }}
-            />
-          </div>
-          <p className="text-xs text-blue-400 mt-2 h-4 font-medium">
-            {isRunning
-              ? breathPhase === 'inhale' ? 'breathe in…' : 'breathe out…'
-              : 'breathe gently through your nose'}
-          </p>
-        </div>
-      )}
-
-      {animate === 'hold' && (
-        <div className="flex flex-col items-center mb-3">
-          <div className={`w-14 h-14 rounded-full border-2 flex items-center justify-center transition-colors duration-700 ${
-            isRunning ? 'bg-amber-50 border-amber-300' : 'bg-gray-50 border-gray-200'
-          }`}>
-            <div className={`w-4 h-4 rounded-full transition-colors duration-700 ${
-              isRunning ? 'bg-amber-300 animate-pulse' : 'bg-gray-200'
-            }`} />
-          </div>
-          <p className={`text-xs mt-2 h-4 font-medium transition-colors duration-700 ${isRunning ? 'text-amber-500' : 'text-gray-400'}`}>
-            {isRunning ? 'holding…' : 'breathe out normally, then hold'}
-          </p>
-        </div>
-      )}
-
-      {animate === 'rest' && (
-        <div className="flex flex-col items-center mb-3">
-          <div className={`w-14 h-14 rounded-full border-2 flex items-center justify-center transition-colors duration-700 ${
-            isRunning ? 'bg-emerald-50 border-emerald-200' : 'bg-gray-50 border-gray-200'
-          }`}>
-            <div className={`w-5 h-5 rounded-full transition-colors duration-700 ${
-              isRunning ? 'bg-emerald-300 animate-pulse' : 'bg-gray-200'
-            }`} />
-          </div>
-          <p className={`text-xs mt-2 h-4 font-medium transition-colors duration-700 ${isRunning ? 'text-emerald-500' : 'text-gray-400'}`}>
-            {isRunning ? 'breathe normally…' : 'let your breathing settle'}
-          </p>
-        </div>
-      )}
+      {animate === 'breathe' && <BreathPacer isRunning={isRunning} phase={breathPhase} />}
+      {animate === 'hold' && <PulsePhase kind="hold" isRunning={isRunning} />}
+      {animate === 'rest' && <PulsePhase kind="rest" isRunning={isRunning} />}
 
       {instructions && (!animate || !isRunning) && elapsed === 0 && (
         <p className="text-sm text-gray-400 text-center mb-3 max-w-xs leading-relaxed">{instructions}</p>
       )}
 
-      <div className={`text-7xl font-mono font-bold tabular-nums mb-1 md:text-8xl ${isComplete ? 'text-green-500' : 'text-gray-800'}`}>
+      <div
+        className={`text-7xl font-mono font-bold tabular-nums mb-1 md:text-8xl ${isComplete ? 'text-green-500' : 'text-gray-800'}`}
+        role="timer"
+        aria-live="off"
+      >
         {display}
       </div>
       <div className="h-7 mb-3 flex items-center">
@@ -243,6 +215,7 @@ export const Timer: React.FC<TimerProps> = ({
         <div className="flex gap-3 w-full">
           <button
             onClick={reset}
+            aria-label="Reset the timer"
             className="p-4 rounded-2xl bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors md:p-5"
           >
             <RotateCcw size={20} />
@@ -264,6 +237,7 @@ export const Timer: React.FC<TimerProps> = ({
             <button
               onClick={confirm}
               className="p-4 rounded-2xl bg-blue-500 text-white hover:bg-blue-600 transition-colors md:p-5"
+              aria-label="Record this time"
               title="Record time"
             >
               <Check size={20} />
@@ -272,6 +246,7 @@ export const Timer: React.FC<TimerProps> = ({
             <button
               onClick={confirm}
               className="p-4 rounded-2xl bg-gray-200 text-gray-500 hover:bg-gray-300 transition-colors text-xs font-semibold md:p-5 md:text-sm"
+              aria-label={`${stopLabel} early`}
               title={`${stopLabel} early`}
             >
               {stopLabel}

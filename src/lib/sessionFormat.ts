@@ -1,4 +1,5 @@
 import { SessionBlock, SessionFormat } from '@/types';
+import { fmtDuration } from '@/lib/time';
 
 export const DEFAULT_FORMAT: SessionFormat = {
   blocks: 2,
@@ -20,8 +21,13 @@ export const REST_PRESETS = [0, 30, 60, 120];
 const clampInt = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, Math.round(value)));
 
-export function clampFormat(format: Partial<SessionFormat> | null | undefined): SessionFormat {
-  const f = format ?? {};
+/**
+ * Takes `unknown` because it is used both on user input and on whatever JSON
+ * happens to be in localStorage. Anything missing or unusable falls back to the
+ * default rather than failing.
+ */
+export function clampFormat(format: unknown): SessionFormat {
+  const f = (typeof format === 'object' && format !== null ? format : {}) as Partial<SessionFormat>;
   return {
     blocks: Number.isFinite(f.blocks)
       ? clampInt(f.blocks as number, MIN_BLOCKS, MAX_BLOCKS)
@@ -35,15 +41,7 @@ export function clampFormat(format: Partial<SessionFormat> | null | undefined): 
   };
 }
 
-/** "45 s" / "10 min" / "7.5 min" — whichever reads more naturally. */
-export function fmtDuration(seconds: number): string {
-  if (seconds < 60) return `${seconds} s`;
-  const minutes = seconds / 60;
-  const rounded = Math.round(minutes * 10) / 10;
-  return `${rounded} min`;
-}
-
-/** "2 × 10 min · 1 min rest" */
+/** "2 × 10 min RB · 1 min rest" */
 export function describeFormat(format: SessionFormat): string {
   const core = `${format.blocks} × ${fmtDuration(format.rbDuration)} RB`;
   return format.restDuration > 0

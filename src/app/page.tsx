@@ -21,8 +21,6 @@ function NewSessionIcon({ size }: { size: number }) {
 export default function Home() {
   const { logs, deleteLog, isLoaded } = useLogs();
 
-  if (!isLoaded) return null;
-
   return (
     <main className="min-h-screen bg-gray-50 pb-28 md:pb-8">
       <header className="bg-white px-6 py-5 shadow-sm mb-6 sticky top-0 z-10">
@@ -51,8 +49,14 @@ export default function Home() {
         </div>
       </header>
 
+      {/* The header above is drawn immediately; only the history has to wait for
+          localStorage, so the first paint is the app rather than a blank page. */}
       <div className="max-w-2xl mx-auto px-4">
-        {logs.length === 0 ? (
+        {!isLoaded ? (
+          <div className="flex justify-center py-20">
+            <Loader2 size={28} className="animate-spin text-gray-300" />
+          </div>
+        ) : logs.length === 0 ? (
           <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200">
             <Activity size={48} className="mx-auto text-gray-300 mb-4" />
             <p className="text-gray-600 font-medium md:text-lg">No sessions recorded yet.</p>

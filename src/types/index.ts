@@ -18,23 +18,6 @@ export interface Session {
   notes: string;
 }
 
-export type LogEntry = Session;
-
-/** Shape written before the exercise-set format became configurable. */
-export interface LegacySession {
-  id: string;
-  timestamp: number;
-  initialPulse: number;
-  initialCP: number;
-  rb1Duration: number;
-  intermediateValue: number;
-  intermediateType: PauseType;
-  rb2Duration: number;
-  finalCP: number;
-  finalPulse: number;
-  notes: string;
-}
-
 /** User-configurable shape of an exercise set. */
 export interface SessionFormat {
   /** Number of RB chunks (each followed by a pause). */

@@ -10,18 +10,46 @@ import { playAlarm, primeAlarm } from '@/lib/alarm';
 interface PulseInputProps {
   label: string;
   value?: number;
-  onChange: (v: number) => void;
+  /** `undefined` means "not measured" — an empty box no longer records a pulse of 0. */
+  onChange: (v: number | undefined) => void;
   onNext: () => void;
 }
+
+/**
+ * Plausible human pulse. The `min`/`max` attributes below are only hints to the
+ * browser, so the same bounds are applied to what actually gets recorded.
+ */
+const MIN_BPM = 30;
+const MAX_BPM = 220;
 
 export const PulseInput: React.FC<PulseInputProps> = ({ label, value, onChange, onNext }) => {
   const { read, state, isSupported, clearError } = useHeartRate();
   const [isCounting, setIsCounting] = useState(false);
   const isBusy = state.status === 'connecting' || state.status === 'reading';
 
+  // The box needs its own text while it is being typed into — "" and a
+  // half-typed "6" are not numbers — but it can also be filled from a strap.
+  // `null` means "nothing typed yet, show whatever the value is".
+  const [draft, setDraft] = useState<string | null>(null);
+  const shown = draft ?? (value === undefined ? '' : String(value));
+
+  const typed = shown.trim() === '' ? null : parseInt(shown, 10);
+  const isOutOfRange =
+    typed !== null && (!Number.isFinite(typed) || typed < MIN_BPM || typed > MAX_BPM);
+
+  const handleDraft = (next: string) => {
+    setDraft(next);
+    const parsed = next.trim() === '' ? null : parseInt(next, 10);
+    if (parsed === null || !Number.isFinite(parsed)) onChange(undefined);
+    else if (parsed >= MIN_BPM && parsed <= MAX_BPM) onChange(parsed);
+  };
+
   const handleBluetooth = async () => {
     const bpm = await read();
-    if (bpm !== null) onChange(bpm);
+    if (bpm !== null) {
+      setDraft(null); // a reading replaces whatever was half-typed
+      onChange(bpm);
+    }
   };
 
   if (isCounting) {
@@ -30,6 +58,7 @@ export const PulseInput: React.FC<PulseInputProps> = ({ label, value, onChange, 
         label={label}
         onCancel={() => setIsCounting(false)}
         onUse={bpm => {
+          setDraft(null); // a counted pulse replaces whatever was half-typed
           onChange(bpm);
           setIsCounting(false);
           onNext();
@@ -46,14 +75,22 @@ export const PulseInput: React.FC<PulseInputProps> = ({ label, value, onChange, 
       <input
         type="number"
         inputMode="numeric"
-        min={30}
-        max={220}
-        className="text-5xl w-36 py-4 text-center border-2 border-blue-300 rounded-2xl mb-4 font-mono font-bold text-gray-800 focus:border-blue-500 outline-none md:text-6xl md:w-44 md:py-5"
+        min={MIN_BPM}
+        max={MAX_BPM}
+        aria-label={`${label}, beats per minute`}
+        aria-invalid={isOutOfRange}
+        className={`text-5xl w-36 py-4 text-center border-2 rounded-2xl font-mono font-bold text-gray-800 outline-none md:text-6xl md:w-44 md:py-5 ${
+          isOutOfRange ? 'border-red-300 focus:border-red-500' : 'border-blue-300 focus:border-blue-500'
+        }`}
         placeholder="–"
-        value={value ?? ''}
+        value={shown}
         autoFocus
-        onChange={e => onChange(parseInt(e.target.value) || 0)}
+        onChange={e => handleDraft(e.target.value)}
       />
+
+      <p className="h-8 text-xs text-red-500 text-center flex items-center">
+        {isOutOfRange && `Enter a pulse between ${MIN_BPM} and ${MAX_BPM} bpm.`}
+      </p>
 
       <div className="flex flex-col items-center gap-2 mb-6">
         <button
@@ -86,7 +123,8 @@ export const PulseInput: React.FC<PulseInputProps> = ({ label, value, onChange, 
 
       <button
         onClick={onNext}
-        className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold w-full hover:bg-blue-700 active:scale-95 transition-transform md:text-lg md:py-5"
+        disabled={isOutOfRange}
+        className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold w-full hover:bg-blue-700 active:scale-95 transition-transform disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100 md:text-lg md:py-5"
       >
         Next
       </button>
@@ -96,6 +134,12 @@ export const PulseInput: React.FC<PulseInputProps> = ({ label, value, onChange, 
 
 /** Counting windows, in seconds. Shorter windows are quicker; longer ones are more accurate. */
 const COUNT_WINDOWS = [15, 30, 60];
+
+/** More beats than this in a single window is a typo, not a pulse. */
+const MAX_BEATS = 300;
+
+const clampBeats = (beats: number) =>
+  Number.isFinite(beats) ? Math.min(MAX_BEATS, Math.max(0, beats)) : 0;
 
 interface PulseCounterProps {
   label: string;
@@ -125,6 +169,9 @@ function PulseCounter({ label, onUse, onCancel }: PulseCounterProps) {
   const isDone = hasStarted && isComplete;
   const remaining = Math.max(0, countWindow - elapsed);
   const bpm = Math.round((beats * 60) / countWindow);
+  // A miscount over a short window scales up hard — 60 beats in 15 s reads as
+  // 240 bpm — so an implausible result is refused rather than recorded.
+  const bpmIsPlausible = bpm >= MIN_BPM && bpm <= MAX_BPM;
 
   const begin = () => {
     primeAlarm();
@@ -188,15 +235,16 @@ function PulseCounter({ label, onUse, onCancel }: PulseCounterProps) {
                 type="number"
                 inputMode="numeric"
                 min={0}
-                max={300}
+                max={MAX_BEATS}
+                aria-label="Beats counted"
                 className="text-3xl w-24 py-2 text-center border-2 border-gray-200 rounded-xl font-mono font-bold text-gray-700 focus:border-blue-500 outline-none"
                 value={beats}
-                onChange={e => setBeats(Math.max(0, parseInt(e.target.value) || 0))}
+                onChange={e => setBeats(clampBeats(parseInt(e.target.value, 10)))}
               />
               <span className="text-sm font-semibold text-gray-400">beats</span>
             </div>
             <button
-              onClick={() => setBeats(b => b + 1)}
+              onClick={() => setBeats(b => clampBeats(b + 1))}
               className="p-3 rounded-xl bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
               aria-label="One beat more"
             >
@@ -204,9 +252,13 @@ function PulseCounter({ label, onUse, onCancel }: PulseCounterProps) {
             </button>
           </div>
 
+          <p className="h-8 text-xs text-red-500 text-center flex items-center">
+            {!bpmIsPlausible && `${bpm} bpm is outside ${MIN_BPM}–${MAX_BPM} — check the count.`}
+          </p>
+
           <button
             onClick={() => onUse(bpm)}
-            disabled={bpm <= 0}
+            disabled={!bpmIsPlausible}
             className="bg-green-500 text-white px-8 py-4 rounded-2xl font-bold w-full hover:bg-green-600 active:scale-95 transition-transform disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100 md:text-lg md:py-5"
           >
             Use {bpm} bpm
@@ -221,7 +273,7 @@ function PulseCounter({ label, onUse, onCancel }: PulseCounterProps) {
       ) : (
         <>
           <button
-            onClick={() => { if (isRunning) setBeats(b => b + 1); else begin(); }}
+            onClick={() => { if (isRunning) setBeats(b => clampBeats(b + 1)); else begin(); }}
             className={`w-44 h-44 rounded-full border-4 flex flex-col items-center justify-center mb-6 transition-colors select-none active:scale-95 md:w-52 md:h-52 ${
               isRunning
                 ? 'border-rose-300 bg-rose-50 text-rose-600'

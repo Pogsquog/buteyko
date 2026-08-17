@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useSyncExternalStore } from 'react';
 
 export type HeartRateState =
   | { status: 'idle' }
@@ -8,20 +8,77 @@ export type HeartRateState =
   | { status: 'reading' }
   | { status: 'error'; message: string };
 
+const READ_TIMEOUT_MS = 10_000;
+
+/**
+ * Reads a single measurement from the standard Bluetooth heart-rate profile.
+ *
+ * The first byte of the characteristic is a flag field; bit 0 says whether the
+ * rate itself is 8- or 16-bit.
+ * https://www.bluetooth.com/specifications/specs/heart-rate-service-1-0/
+ */
+function parseHeartRate(value: DataView | null): number | null {
+  if (!value || value.byteLength < 2) return null;
+  const is16Bit = value.getUint8(0) & 0x01;
+  if (is16Bit && value.byteLength < 3) return null;
+  return is16Bit ? value.getUint16(1, true) : value.getUint8(1);
+}
+
+/**
+ * Waits for one notification from the characteristic. Whatever happens —
+ * reading, timeout, or a failure to subscribe at all — the listener is removed
+ * and notifications are stopped, so a cancelled read leaves nothing running.
+ */
+function readOneMeasurement(characteristic: BluetoothRemoteGATTCharacteristic): Promise<number> {
+  return new Promise<number>((resolve, reject) => {
+    let settled = false;
+
+    const finish = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      characteristic.removeEventListener('characteristicvaluechanged', handler);
+      characteristic.stopNotifications().catch(() => {});
+      fn();
+    };
+
+    const timeout = setTimeout(
+      () => finish(() => reject(new Error('No reading received within 10 seconds'))),
+      READ_TIMEOUT_MS,
+    );
+
+    const handler = function (this: BluetoothRemoteGATTCharacteristic) {
+      const bpm = parseHeartRate(this.value);
+      // A malformed packet is not fatal; wait for the next notification.
+      if (bpm === null) return;
+      finish(() => resolve(bpm));
+    };
+
+    characteristic.addEventListener('characteristicvaluechanged', handler);
+    characteristic.startNotifications().catch(e => finish(() => reject(e)));
+  });
+}
+
+const subscribeNever = () => () => {};
+const hasBluetooth = () => navigator.bluetooth != null;
+
 export function useHeartRate() {
   const [state, setState] = useState<HeartRateState>({ status: 'idle' });
-  // Evaluated in useEffect so SSR and client hydration both start false,
-  // then the client sets the real value after mount.
-  const [isSupported, setIsSupported] = useState(false);
 
-  useEffect(() => {
-    setIsSupported(navigator.bluetooth != null);
-  }, []);
+  // Whether the browser has Web Bluetooth is a fact about the client, not
+  // state: the server snapshot is false so prerender and hydration agree, and
+  // the real answer arrives with the first client render. It never changes
+  // afterwards, so there is nothing to subscribe to.
+  const isSupported = useSyncExternalStore(subscribeNever, hasBluetooth, () => false);
 
   const read = useCallback(async (): Promise<number | null> => {
     if (!isSupported || !navigator.bluetooth) return null;
 
     setState({ status: 'connecting' });
+
+    // Held outside the try so the connection can be closed on every exit path.
+    // Leaving it open kept the strap bonded and notifying after a failed read.
+    let server: BluetoothRemoteGATTServer | null = null;
 
     try {
       const device = await navigator.bluetooth.requestDevice({
@@ -30,34 +87,14 @@ export function useHeartRate() {
 
       if (!device.gatt) throw new Error('Device has no GATT server');
 
-      const server = await device.gatt.connect();
+      server = await device.gatt.connect();
 
       setState({ status: 'reading' });
 
       const service = await server.getPrimaryService('heart_rate');
       const characteristic = await service.getCharacteristic('heart_rate_measurement');
+      const bpm = await readOneMeasurement(characteristic);
 
-      const bpm = await new Promise<number>((resolve, reject) => {
-        const timeout = setTimeout(
-          () => reject(new Error('No reading received within 10 seconds')),
-          10_000,
-        );
-
-        const handler = function (this: BluetoothRemoteGATTCharacteristic) {
-          clearTimeout(timeout);
-          const val = this.value!;
-          const flags = val.getUint8(0);
-          const heartRate = flags & 0x01 ? val.getUint16(1, true) : val.getUint8(1);
-          characteristic.removeEventListener('characteristicvaluechanged', handler);
-          characteristic.stopNotifications().catch(() => {});
-          resolve(heartRate);
-        };
-
-        characteristic.addEventListener('characteristicvaluechanged', handler);
-        characteristic.startNotifications().catch(reject);
-      });
-
-      server.disconnect();
       setState({ status: 'idle' });
       return bpm;
     } catch (e: unknown) {
@@ -69,6 +106,8 @@ export function useHeartRate() {
         setState({ status: 'error', message: err.message || 'Failed to read heart rate' });
       }
       return null;
+    } finally {
+      if (server?.connected) server.disconnect();
     }
   }, [isSupported]);
 

@@ -7,9 +7,12 @@ import { useLogs } from '@/hooks/useLogs';
 import { useFormat } from '@/hooks/useFormat';
 import { Timer } from '@/components/Timer';
 import { PulseInput } from '@/components/PulseInput';
-import { Loader2, Save, Settings2, X } from 'lucide-react';
+import { AlertCircle, Loader2, Save, Settings2, X } from 'lucide-react';
 import { PauseType, SessionBlock, SessionFormat } from '@/types';
-import { blocksForFormat, describeFormat, fmtDuration } from '@/lib/format';
+import { blocksForFormat, describeFormat } from '@/lib/sessionFormat';
+import { fmtDuration } from '@/lib/time';
+import { sequenceLabels, UNDECIDED_PAUSE } from '@/lib/sequence';
+import { newSessionId } from '@/lib/session';
 
 type Step =
   | { kind: 'INITIAL_PULSE' }
@@ -67,7 +70,21 @@ const RB_TIPS = [
 export default function NewSessionPage() {
   const { format: savedFormat, isLoaded } = useFormat();
 
-  if (!isLoaded) return null;
+  // The saved format decides how many steps there are, so the flow cannot be
+  // built until localStorage has been read. The frame is drawn either way, so
+  // the first paint is the app rather than a blank screen.
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+        <div className="max-w-md mx-auto md:max-w-xl">
+          <div className="bg-white p-8 rounded-3xl shadow-lg border border-gray-100 min-h-[380px] flex items-center justify-center md:p-12 md:min-h-[460px]">
+            <Loader2 size={28} className="animate-spin text-gray-300" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return <SessionFlow format={savedFormat} />;
 }
 
@@ -88,6 +105,7 @@ function SessionFlow({ format: initialFormat }: { format: SessionFormat }) {
   const [blocks, setBlocks] = useState<SessionBlock[]>(() => blocksForFormat(format));
   const [isSaving, setIsSaving] = useState(false);
   const [saveIsSlow, setSaveIsSlow] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
   // A ref, not the state above: two taps in the same tick both read the old
   // state, but the ref is already set by the time the second one runs.
   const savingRef = useRef(false);
@@ -111,22 +129,18 @@ function SessionFlow({ format: initialFormat }: { format: SessionFormat }) {
   const typeDecided = (block: number) =>
     currentStep >= steps.findIndex(s => s.kind === 'PAUSE' && s.block === block);
 
-  const sequenceLabels = [
-    'P',
-    'CP',
-    ...blocks.flatMap((block, i) => [
-      'RB',
-      typeDecided(i) || i === blocks.length - 1 ? block.pauseType : 'CP/EP',
-    ]),
-    'P',
-  ];
+  const labels = sequenceLabels(blocks.length, (i, isLast) =>
+    typeDecided(i) || isLast ? blocks[i].pauseType : UNDECIDED_PAUSE,
+  );
 
   const handleSave = () => {
     if (savingRef.current) return; // an impatient second tap would save twice
     savingRef.current = true;
     setIsSaving(true);
-    saveLog({
-      id: Date.now().toString(),
+    setSaveFailed(false);
+
+    const saved = saveLog({
+      id: newSessionId(),
       timestamp: Date.now(),
       initialPulse: initialPulse ?? 0,
       initialCP,
@@ -134,6 +148,16 @@ function SessionFlow({ format: initialFormat }: { format: SessionFormat }) {
       finalPulse: finalPulse ?? 0,
       notes,
     });
+
+    // A full quota or Safari's private mode rejects the write. Leaving the
+    // button spinning would strand a finished session behind a dead screen.
+    if (!saved) {
+      savingRef.current = false;
+      setIsSaving(false);
+      setSaveFailed(true);
+      return;
+    }
+
     // replace(): the finished session should not be somewhere Back can return to.
     router.replace('/');
   };
@@ -291,9 +315,18 @@ function SessionFlow({ format: initialFormat }: { format: SessionFormat }) {
                 : <><Save size={20} /> Save Session</>
               }
             </button>
-            {saveIsSlow && (
+            {saveIsSlow && !saveFailed && (
               <p className="mt-3 text-xs text-gray-400 text-center md:text-sm">
                 Session saved — still opening your history…
+              </p>
+            )}
+            {saveFailed && (
+              <p className="mt-3 flex items-start gap-1.5 text-xs text-red-500 text-center md:text-sm">
+                <AlertCircle size={14} className="shrink-0 mt-0.5" />
+                <span>
+                  Could not save — your browser refused to write to storage. Free up space
+                  or leave private browsing, then try again.
+                </span>
               </p>
             )}
           </div>
@@ -318,7 +351,7 @@ function SessionFlow({ format: initialFormat }: { format: SessionFormat }) {
         {/* Sequence indicator */}
         {seqIndex >= 0 && (
           <div className="flex items-center mb-6 px-1 overflow-x-auto">
-            {sequenceLabels.map((label, i) => (
+            {labels.map((label, i) => (
               <React.Fragment key={i}>
                 <div className="flex flex-col items-center gap-1 shrink-0">
                   <div
@@ -336,7 +369,7 @@ function SessionFlow({ format: initialFormat }: { format: SessionFormat }) {
                     {label}
                   </span>
                 </div>
-                {i < sequenceLabels.length - 1 && (
+                {i < labels.length - 1 && (
                   <div className={`flex-1 min-w-[8px] h-px mx-1 ${i < seqIndex ? 'bg-blue-200' : 'bg-gray-200'}`} />
                 )}
               </React.Fragment>

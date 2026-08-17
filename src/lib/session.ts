@@ -1,4 +1,13 @@
-import { LegacySession, LogEntry, PauseType, SessionBlock } from '@/types';
+import { PauseType, Session, SessionBlock } from '@/types';
+
+/** Shape written before the exercise-set format became configurable. */
+interface LegacySession {
+  rb1Duration: number;
+  intermediateValue: number;
+  intermediateType: PauseType;
+  rb2Duration: number;
+  finalCP: number;
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -28,10 +37,11 @@ function legacyBlocks(entry: LegacySession): SessionBlock[] {
 }
 
 /**
- * Brings a stored log up to the current shape, or drops it if it is not a log
- * at all. Old entries stay readable rather than being silently discarded.
+ * Brings a stored session up to the current shape, or drops it if it is not a
+ * session at all. Old entries stay readable rather than being silently
+ * discarded.
  */
-export function normalizeLog(entry: unknown): LogEntry | null {
+export function normalizeSession(entry: unknown): Session | null {
   if (!isRecord(entry)) return null;
   if (typeof entry.id !== 'string' || typeof entry.timestamp !== 'number') return null;
 
@@ -56,7 +66,19 @@ export function normalizeLog(entry: unknown): LogEntry | null {
   };
 }
 
-export function normalizeLogs(raw: unknown): LogEntry[] {
+export function normalizeSessions(raw: unknown): Session[] {
   if (!Array.isArray(raw)) return [];
-  return raw.map(normalizeLog).filter((log): log is LogEntry => log !== null);
+  return raw.map(normalizeSession).filter((s): s is Session => s !== null);
+}
+
+/**
+ * Collision-proof, unlike the `Date.now()` this used to use: two sessions saved
+ * inside the same millisecond would have shared an id, and deleting one would
+ * have taken the other with it.
+ */
+export function newSessionId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }

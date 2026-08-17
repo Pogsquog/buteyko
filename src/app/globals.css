@@ -1,7 +1,13 @@
 @import "tailwindcss";
 
+/*
+ * Every screen paints its own light surfaces (bg-gray-50 cards on white), so
+ * the palette here is deliberately light-only. A prefers-color-scheme block
+ * used to set dark values that nothing consumed — no `dark:` variant exists in
+ * the app — which only ever showed as a dark flash behind the page.
+ */
 :root {
-  --background: #ffffff;
+  --background: #f9fafb; /* gray-50, matching the app background */
   --foreground: #171717;
 }
 
@@ -12,15 +18,10 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  /* Geist is loaded by next/font in the layout; this used to say Arial, which
+     overrode it and made the download pointless. */
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
