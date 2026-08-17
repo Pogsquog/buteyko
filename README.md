@@ -44,14 +44,48 @@ Sessions logged before the format was configurable are read back unchanged.
   by hand against a 15 / 30 / 60 second countdown — tap the circle on each beat
   (or type the total afterwards) and the count is scaled to beats per minute.
 
+## Your data
+
+Everything is kept in `localStorage` on the device, unencrypted, and never
+leaves it — there is no account, no server and no analytics. That also means
+there is no backup: clearing site data for this origin deletes your history.
+
 ## Running
 
 ```bash
 npm install
-npm run dev
+npm run dev     # dev server on http://localhost:3000
+npm test        # unit tests (vitest)
+npm run lint    # eslint
+npm run build   # static export to ./out
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+## Deploying
+
+`next build` writes a static export to `out/`, which is what
+[`wrangler.jsonc`](./wrangler.jsonc) serves:
+
+```bash
+npm run build
+npx wrangler deploy
+```
+
+Security headers, cache policy and the no-cache rule for the service worker are
+in [`public/_headers`](./public/_headers) — a static export cannot set headers
+from `next.config.mjs`, so Cloudflare applies them at the edge.
+
+## PWA
+
+Installable and offline-capable, from a manifest and a service worker that are
+both maintained by hand:
+
+- [`src/app/manifest.ts`](./src/app/manifest.ts) — emitted as
+  `/manifest.webmanifest` and linked from every page automatically.
+- [`public/sw.js`](./public/sw.js) — runtime caching only, deliberately naming
+  no build artefacts so it cannot go stale against a new deploy. Registered by
+  `ServiceWorkerRegistrar`, in production builds only.
+- Icons are generated from [`public/icon.svg`](./public/icon.svg) with
+  `node scripts/generate-icons.mjs`.
 
 ## Stack
 
@@ -60,4 +94,4 @@ Open [http://localhost:3000](http://localhost:3000).
 - Tailwind CSS v4
 - Lucide icons
 - localStorage persistence
-- PWA (production build)
+- Vitest for tests
