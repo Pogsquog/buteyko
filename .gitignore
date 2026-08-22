@@ -51,3 +51,6 @@ next-env.d.ts
 # (public/sw.js itself is hand-written and *is* tracked)
 /public/workbox-*.js
 /public/sw.js.map
+
+# local secrets
+secret.txt
