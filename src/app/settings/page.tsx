@@ -196,6 +196,9 @@ interface CustomDurationProps {
 function CustomDuration({ label, unit, valueSeconds, min, max, onChange }: CustomDurationProps) {
   const { perSecond, step, parse, inputMode } = UNITS[unit];
   const [draft, setDraft] = React.useState('');
+  // Labels contain spaces, which an id built from them would not survive —
+  // useId is guaranteed to be a valid, unique element id.
+  const id = React.useId();
 
   const commit = () => {
     const typed = parse(draft);
@@ -210,11 +213,11 @@ function CustomDuration({ label, unit, valueSeconds, min, max, onChange }: Custo
 
   return (
     <div className="flex items-center gap-3 mt-4">
-      <label className="text-sm text-gray-500 md:text-base" htmlFor={`custom-${unit}-${label}`}>
+      <label className="text-sm text-gray-500 md:text-base" htmlFor={id}>
         {label}
       </label>
       <input
-        id={`custom-${unit}-${label}`}
+        id={id}
         type="number"
         inputMode={inputMode}
         min={inUnits(min)}

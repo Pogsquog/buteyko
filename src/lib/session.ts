@@ -43,7 +43,10 @@ function legacyBlocks(entry: LegacySession): SessionBlock[] {
  */
 export function normalizeSession(entry: unknown): Session | null {
   if (!isRecord(entry)) return null;
-  if (typeof entry.id !== 'string' || typeof entry.timestamp !== 'number') return null;
+  // Finite, not merely numeric: NaN and Infinity are numbers too, and a
+  // non-finite timestamp renders as an invalid date downstream.
+  if (typeof entry.id !== 'string' || typeof entry.timestamp !== 'number' || !Number.isFinite(entry.timestamp))
+    return null;
 
   const blocks = isLegacy(entry)
     ? legacyBlocks(entry as unknown as LegacySession)

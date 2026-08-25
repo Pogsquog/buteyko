@@ -11,22 +11,30 @@
  *  - `/_next/static/*` is content-hashed and therefore immutable: serve from
  *    cache, fall back to the network, and keep whatever comes back.
  *  - Navigations go to the network first so a fresh deploy is picked up
- *    immediately, falling back to the cached page (and finally the cached
- *    start page) when offline.
+ *    immediately, falling back to that route's cached page when offline.
+ *    Only a route never seen before lands on the cached start page.
  *  - Everything else same-origin is stale-while-revalidate.
  *
  * Bump CACHE_VERSION to evict every cache on the next activation.
  */
 
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';
 const ASSET_CACHE = `buteyko-assets-${CACHE_VERSION}`;
 const PAGE_CACHE = `buteyko-pages-${CACHE_VERSION}`;
 const CURRENT_CACHES = [ASSET_CACHE, PAGE_CACHE];
 
-// The app shell. These are stable paths, not build artefacts, so precaching
-// them cannot rot; a failure here must not block installation either.
+// The app shell: every route the app actually has. These are stable paths,
+// not build artefacts, so precaching them cannot rot; a failure here must not
+// block installation either. Precaching each route (rather than falling back
+// to the start page) is what lets an offline deep link serve the right page.
 const START_URL = '/';
-const PRECACHE_URLS = [START_URL, '/manifest.webmanifest', '/icon-192x192.png'];
+const PRECACHE_URLS = [
+  START_URL,
+  '/new-session',
+  '/settings',
+  '/manifest.webmanifest',
+  '/icon-192x192.png',
+];
 
 self.addEventListener('install', event => {
   event.waitUntil(

@@ -17,11 +17,11 @@ const store = createLocalStore<Session[]>({
 export const useLogs = () => {
   const [logs, isLoaded] = useLocalStore(store);
 
-  /** False if the write was rejected, so the caller can say so rather than pretending. */
-  const saveLog = useCallback((session: Session) => store.set([session, ...store.get()]), []);
+  /** Resolves false if the write was rejected, so the caller can say so rather than pretending. */
+  const saveLog = useCallback((session: Session) => store.update(logs => [session, ...logs]), []);
 
   const deleteLog = useCallback(
-    (id: string) => store.set(store.get().filter(log => log.id !== id)),
+    (id: string) => store.update(logs => logs.filter(log => log.id !== id)),
     [],
   );
 

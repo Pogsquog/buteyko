@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Calendar, Clock, Trash2 } from 'lucide-react';
 import { Session } from '@/types';
 import { fmtCompact, fmtSeconds } from '@/lib/time';
@@ -17,6 +17,38 @@ const MAX_CELLS_PER_ROW = 7;
 export const LogCard: React.FC<LogCardProps> = ({ log, onDelete }) => {
   const date = new Date(log.timestamp);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const trashRef = useRef<HTMLButtonElement>(null);
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  const confirmRef = useRef<HTMLDivElement>(null);
+
+  // The confirm is a real dialog to keyboards and screen readers too: focus
+  // moves to Cancel when it opens (the safer of the two buttons), Escape and
+  // an outside click back out of it, and dismissing returns focus to where
+  // the journey started.
+  useEffect(() => {
+    if (!confirmingDelete) return;
+    cancelRef.current?.focus();
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setConfirmingDelete(false);
+    };
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target as Node;
+      if (!confirmRef.current?.contains(target) && !trashRef.current?.contains(target)) {
+        setConfirmingDelete(false);
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('pointerdown', onPointerDown);
+    };
+  }, [confirmingDelete]);
+
+  const cancelDelete = () => {
+    setConfirmingDelete(false);
+    trashRef.current?.focus();
+  };
 
   // P / CP / (RB / CP·EP) × n / P — the same sequence the session was recorded
   // against, paired here with the values.
@@ -53,9 +85,10 @@ export const LogCard: React.FC<LogCardProps> = ({ log, onDelete }) => {
         </div>
         {/* Two taps to delete: this is the only copy of the data, and there is no undo. */}
         {confirmingDelete ? (
-          <div className="flex items-center gap-2">
+          <div ref={confirmRef} className="flex items-center gap-2" role="group" aria-label="Confirm delete">
             <button
-              onClick={() => setConfirmingDelete(false)}
+              ref={cancelRef}
+              onClick={cancelDelete}
               className="text-xs font-semibold text-gray-500 hover:text-gray-700 px-2 py-1"
             >
               Cancel
@@ -69,6 +102,7 @@ export const LogCard: React.FC<LogCardProps> = ({ log, onDelete }) => {
           </div>
         ) : (
           <button
+            ref={trashRef}
             onClick={() => setConfirmingDelete(true)}
             className="text-gray-300 hover:text-red-400 transition-colors"
             aria-label={`Delete the session from ${date.toLocaleDateString()}`}

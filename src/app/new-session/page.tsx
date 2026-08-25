@@ -133,13 +133,13 @@ function SessionFlow({ format: initialFormat }: { format: SessionFormat }) {
     typeDecided(i) || isLast ? blocks[i].pauseType : UNDECIDED_PAUSE,
   );
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (savingRef.current) return; // an impatient second tap would save twice
     savingRef.current = true;
     setIsSaving(true);
     setSaveFailed(false);
 
-    const saved = saveLog({
+    const saved = await saveLog({
       id: newSessionId(),
       timestamp: Date.now(),
       initialPulse: initialPulse ?? 0,

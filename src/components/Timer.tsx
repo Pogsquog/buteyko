@@ -117,6 +117,9 @@ export const Timer: React.FC<TimerProps> = ({
   };
 
   const display = mode === 'countdown' ? fmtClock(Math.max(0, targetSeconds - elapsed)) : fmtClock(elapsed);
+  // A stopwatch confirm before anything was timed would record a meaningless
+  // zero, so the ✓ waits until the timer has actually run.
+  const notStarted = mode === 'stopwatch' && !isRunning && elapsed === 0;
   const progress = mode === 'countdown' ? Math.min(100, (elapsed / targetSeconds) * 100) : null;
   const currentTip = tips && tips.length > 0 && isRunning
     ? tips[Math.floor(elapsed / 60) % tips.length]
@@ -200,6 +203,11 @@ export const Timer: React.FC<TimerProps> = ({
       >
         {display}
       </div>
+      {/* Completion is otherwise audio-only (the chime): announce it politely
+          for screen readers, without narrating every ticking second. */}
+      <div className="sr-only" role="status">
+        {isComplete ? `${label} complete` : ''}
+      </div>
       <div className="h-7 mb-3 flex items-center">
         {isComplete && <span className="text-green-500 font-semibold text-sm tracking-wide uppercase md:text-base">Complete!</span>}
       </div>
@@ -236,9 +244,10 @@ export const Timer: React.FC<TimerProps> = ({
           {mode === 'stopwatch' ? (
             <button
               onClick={confirm}
-              className="p-4 rounded-2xl bg-blue-500 text-white hover:bg-blue-600 transition-colors md:p-5"
+              disabled={notStarted}
+              className="p-4 rounded-2xl bg-blue-500 text-white hover:bg-blue-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed md:p-5"
               aria-label="Record this time"
-              title="Record time"
+              title={notStarted ? 'Start the timer first' : 'Record time'}
             >
               <Check size={20} />
             </button>
