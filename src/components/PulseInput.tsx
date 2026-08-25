@@ -4,6 +4,7 @@ import React, { useCallback, useState } from 'react';
 import { Bluetooth, Loader2, Minus, Plus, Timer as TimerIcon, X } from 'lucide-react';
 import { useHeartRate } from '@/hooks/useHeartRate';
 import { useTimer } from '@/hooks/useTimer';
+import { useGetReady } from '@/hooks/useGetReady';
 import { useWakeLock } from '@/hooks/useWakeLock';
 import { playAlarm, primeAlarm } from '@/lib/alarm';
 
@@ -166,6 +167,12 @@ function PulseCounter({ label, onUse, onCancel }: PulseCounterProps) {
 
   useWakeLock(isRunning);
 
+  // Finding a pulse takes both hands and the phone out of play, so starting
+  // the count leads in with 3-2-1.
+  const { remaining: getReadyCount, begin: beginGetReady, cancel: cancelGetReady } =
+    useGetReady(3, () => start());
+  const isGettingReady = getReadyCount !== null;
+
   const isDone = hasStarted && isComplete;
   const remaining = Math.max(0, countWindow - elapsed);
   const bpm = Math.round((beats * 60) / countWindow);
@@ -178,7 +185,13 @@ function PulseCounter({ label, onUse, onCancel }: PulseCounterProps) {
     reset();
     setBeats(0);
     setHasStarted(true);
-    start();
+    beginGetReady();
+  };
+
+  // Backing out of the lead-in returns to the pre-start screen.
+  const cancelCountdown = () => {
+    cancelGetReady();
+    setHasStarted(false);
   };
 
   const chooseWindow = (seconds: number) => {
@@ -194,12 +207,14 @@ function PulseCounter({ label, onUse, onCancel }: PulseCounterProps) {
       <p className="text-sm text-gray-500 mb-4 text-center md:text-base">
         {isRunning
           ? 'Tap the circle on every beat'
-          : isDone
-            ? `${beats} beats in ${countWindow} s`
-            : 'Find your pulse, then start the countdown'}
+          : isGettingReady
+            ? 'Get ready…'
+            : isDone
+              ? `${beats} beats in ${countWindow} s`
+              : 'Find your pulse, then start the countdown'}
       </p>
 
-      {!isRunning && !isDone && (
+      {!isRunning && !isDone && !isGettingReady && (
         <div className="flex gap-2 mb-6">
           {COUNT_WINDOWS.map(seconds => (
             <button
@@ -273,7 +288,7 @@ function PulseCounter({ label, onUse, onCancel }: PulseCounterProps) {
       ) : (
         <>
           <button
-            onClick={() => { if (isRunning) setBeats(b => clampBeats(b + 1)); else begin(); }}
+            onClick={() => { if (isRunning) setBeats(b => clampBeats(b + 1)); else if (isGettingReady) cancelCountdown(); else begin(); }}
             className={`w-44 h-44 rounded-full border-4 flex flex-col items-center justify-center mb-6 transition-colors select-none active:scale-95 md:w-52 md:h-52 ${
               isRunning
                 ? 'border-rose-300 bg-rose-50 text-rose-600'
@@ -284,6 +299,13 @@ function PulseCounter({ label, onUse, onCancel }: PulseCounterProps) {
               <>
                 <span className="text-6xl font-mono font-bold tabular-nums md:text-7xl">{beats}</span>
                 <span className="text-xs font-semibold uppercase tracking-wider mt-1">beats · {remaining} s left</span>
+              </>
+            ) : isGettingReady ? (
+              <>
+                <span className="text-6xl font-mono font-bold tabular-nums md:text-7xl">{getReadyCount}</span>
+                {/* Screen-reader users have put the phone down too: narrate the count. */}
+                <span className="sr-only" role="status">{`Starting in ${getReadyCount}…`}</span>
+                <span className="text-xs font-semibold uppercase tracking-wider mt-1">tap to cancel</span>
               </>
             ) : (
               <>
@@ -296,7 +318,9 @@ function PulseCounter({ label, onUse, onCancel }: PulseCounterProps) {
           <p className="text-xs text-gray-400 text-center max-w-xs leading-relaxed mb-2">
             {isRunning
               ? 'Keep tapping until the chime — the count is scaled to a full minute.'
-              : 'You can also count in your head and type the total in afterwards.'}
+              : isGettingReady
+                ? 'Tap the circle to cancel.'
+                : 'You can also count in your head and type the total in afterwards.'}
           </p>
         </>
       )}

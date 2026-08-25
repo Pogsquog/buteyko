@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Play, Square, RotateCcw, Check, Keyboard, Timer as TimerIcon } from 'lucide-react';
 import { useTimer } from '@/hooks/useTimer';
+import { useGetReady } from '@/hooks/useGetReady';
 import { useWakeLock } from '@/hooks/useWakeLock';
 import { playAlarm, primeAlarm } from '@/lib/alarm';
 import { fmtClock } from '@/lib/time';
@@ -56,6 +57,14 @@ export const Timer: React.FC<TimerProps> = ({
 
   useWakeLock(isRunning);
 
+  // Holds need both hands (nose pinched) and the phone somewhere else, so a
+  // first start leads in with 3-2-1. Resuming a paused hold does not: the
+  // user never let go.
+  const startTiming = useCallback(() => start(), [start]);
+  const { remaining: getReadyCount, begin: beginGetReady, cancel: cancelGetReady } =
+    useGetReady(3, startTiming);
+  const isGettingReady = getReadyCount !== null;
+
   useEffect(() => {
     if (autoStart) {
       primeAlarm();
@@ -70,12 +79,17 @@ export const Timer: React.FC<TimerProps> = ({
 
   const toggle = () => {
     if (isComplete) return;
+    if (isGettingReady) {
+      cancelGetReady();
+      return;
+    }
     if (isRunning) {
       pause();
-    } else {
-      primeAlarm();
-      start();
+      return;
     }
+    primeAlarm();
+    if (mode === 'stopwatch' && elapsed === 0) beginGetReady();
+    else start();
   };
 
   const confirm = () => {
@@ -196,21 +210,36 @@ export const Timer: React.FC<TimerProps> = ({
         <p className="text-sm text-gray-400 text-center mb-3 max-w-xs leading-relaxed">{instructions}</p>
       )}
 
-      <div
-        className={`text-7xl font-mono font-bold tabular-nums mb-1 md:text-8xl ${isComplete ? 'text-green-500' : 'text-gray-800'}`}
-        role="timer"
-        aria-live="off"
-      >
-        {display}
-      </div>
-      {/* Completion is otherwise audio-only (the chime): announce it politely
-          for screen readers, without narrating every ticking second. */}
-      <div className="sr-only" role="status">
-        {isComplete ? `${label} complete` : ''}
-      </div>
-      <div className="h-7 mb-3 flex items-center">
-        {isComplete && <span className="text-green-500 font-semibold text-sm tracking-wide uppercase md:text-base">Complete!</span>}
-      </div>
+      {isGettingReady ? (
+        <>
+          <div className="text-7xl font-mono font-bold tabular-nums mb-1 text-blue-600 md:text-8xl" role="timer">
+            {getReadyCount}
+          </div>
+          {/* Screen-reader users have put the phone down too: narrate the count. */}
+          <div className="sr-only" role="status">{`Starting in ${getReadyCount}…`}</div>
+          <div className="h-7 mb-3 flex items-center">
+            <span className="text-gray-400 font-semibold text-sm tracking-wide uppercase md:text-base">Get ready…</span>
+          </div>
+        </>
+      ) : (
+        <>
+          <div
+            className={`text-7xl font-mono font-bold tabular-nums mb-1 md:text-8xl ${isComplete ? 'text-green-500' : 'text-gray-800'}`}
+            role="timer"
+            aria-live="off"
+          >
+            {display}
+          </div>
+          {/* Completion is otherwise audio-only (the chime): announce it politely
+              for screen readers, without narrating every ticking second. */}
+          <div className="sr-only" role="status">
+            {isComplete ? `${label} complete` : ''}
+          </div>
+          <div className="h-7 mb-3 flex items-center">
+            {isComplete && <span className="text-green-500 font-semibold text-sm tracking-wide uppercase md:text-base">Complete!</span>}
+          </div>
+        </>
+      )}
 
       {isComplete ? (
         <button
@@ -219,10 +248,17 @@ export const Timer: React.FC<TimerProps> = ({
         >
           Next Step
         </button>
+      ) : isGettingReady ? (
+        <button
+          onClick={cancelGetReady}
+          className="w-full py-4 rounded-2xl bg-gray-100 text-gray-600 hover:bg-gray-200 font-bold transition-colors md:text-lg md:py-5"
+        >
+          Cancel
+        </button>
       ) : (
         <div className="flex gap-3 w-full">
           <button
-            onClick={reset}
+            onClick={() => { cancelGetReady(); reset(); }}
             aria-label="Reset the timer"
             className="p-4 rounded-2xl bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors md:p-5"
           >
@@ -264,7 +300,7 @@ export const Timer: React.FC<TimerProps> = ({
         </div>
       )}
 
-      {allowManualEntry && !isComplete && (
+      {allowManualEntry && !isComplete && !isGettingReady && (
         <button
           onClick={openManual}
           className="mt-4 flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 font-medium transition-colors md:text-base"
