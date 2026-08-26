@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 /**
- * A 3-2-1 lead-in for timers whose start needs hands-on preparation — nose
- * pinched for a hold, fingers on the wrist for a pulse — so the user can put
- * the device down before the timing actually begins.
+ * A counted lead-in for a timer whose start needs hands-on preparation —
+ * fingers on the wrist for a pulse — so the user can put the device down
+ * before the timing actually begins.
  *
  * Wall-clock based like useTimer: what matters is when "go" happens, not that
  * every tick lands, so a throttled or suspended tab still releases on time.

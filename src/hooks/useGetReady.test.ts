@@ -26,17 +26,17 @@ describe('useGetReady', () => {
     expect(onGo).not.toHaveBeenCalled();
   });
 
-  it('counts down 3-2-1 and fires once at zero', async () => {
+  it('counts down 5 seconds and fires once at zero', async () => {
     const onGo = vi.fn();
-    const { result } = renderHook(() => useGetReady(3, onGo));
+    const { result } = renderHook(() => useGetReady(5, onGo));
 
     act(() => result.current.begin());
-    expect(result.current.remaining).toBe(3);
+    expect(result.current.remaining).toBe(5);
 
-    await act(async () => { vi.advanceTimersByTime(1000); });
-    expect(result.current.remaining).toBe(2);
-    await act(async () => { vi.advanceTimersByTime(1000); });
-    expect(result.current.remaining).toBe(1);
+    for (const left of [4, 3, 2, 1]) {
+      await act(async () => { vi.advanceTimersByTime(1000); });
+      expect(result.current.remaining).toBe(left);
+    }
     expect(onGo).not.toHaveBeenCalled();
 
     await act(async () => { vi.advanceTimersByTime(1000); });

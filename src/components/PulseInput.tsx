@@ -168,9 +168,9 @@ function PulseCounter({ label, onUse, onCancel }: PulseCounterProps) {
   useWakeLock(isRunning);
 
   // Finding a pulse takes both hands and the phone out of play, so starting
-  // the count leads in with 3-2-1.
+  // the count leads in with a 5-second countdown.
   const { remaining: getReadyCount, begin: beginGetReady, cancel: cancelGetReady } =
-    useGetReady(3, () => start());
+    useGetReady(5, () => start());
   const isGettingReady = getReadyCount !== null;
 
   const isDone = hasStarted && isComplete;
