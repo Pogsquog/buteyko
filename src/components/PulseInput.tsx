@@ -297,8 +297,20 @@ function PulseCounter({ label, onUse, onCancel }: PulseCounterProps) {
           >
             {isRunning ? (
               <>
-                <span className="text-6xl font-mono font-bold tabular-nums md:text-7xl">{beats}</span>
-                <span className="text-xs font-semibold uppercase tracking-wider mt-1">beats · {remaining} s left</span>
+                {/* Time left is what the count is racing, so it gets the big
+                    numerals; the tally only has to confirm the tap landed. */}
+                <span
+                  className="text-6xl font-mono font-bold tabular-nums md:text-7xl"
+                  role="timer"
+                  aria-live="off"
+                >
+                  {remaining}
+                </span>
+                <span className="text-xs font-semibold uppercase tracking-wider mt-0.5">seconds left</span>
+                <span className="mt-2 flex items-baseline gap-1.5">
+                  <span className="text-2xl font-mono font-bold tabular-nums md:text-3xl">{beats}</span>
+                  <span className="text-xs font-semibold uppercase tracking-wider">beats</span>
+                </span>
               </>
             ) : isGettingReady ? (
               <>
