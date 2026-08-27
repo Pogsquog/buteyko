@@ -70,10 +70,10 @@ export const LogCard: React.FC<LogCardProps> = ({ log, onDelete }) => {
   const fillers = (columns - (cells.length % columns)) % columns;
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm overflow-hidden">
       {/* Date / time header */}
-      <div className="flex justify-between items-center px-4 py-3 border-b border-gray-50">
-        <div className="flex items-center gap-3 text-sm text-gray-500">
+      <div className="flex justify-between items-center px-4 py-3 border-b border-gray-50 dark:border-slate-800">
+        <div className="flex items-center gap-3 text-sm text-gray-500 dark:text-slate-400">
           <div className="flex items-center gap-1">
             <Calendar size={13} />
             <span>{date.toLocaleDateString()}</span>
@@ -89,7 +89,7 @@ export const LogCard: React.FC<LogCardProps> = ({ log, onDelete }) => {
             <button
               ref={cancelRef}
               onClick={cancelDelete}
-              className="text-xs font-semibold text-gray-500 hover:text-gray-700 px-2 py-1"
+              className="text-xs font-semibold text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 px-2 py-1"
             >
               Cancel
             </button>
@@ -104,7 +104,7 @@ export const LogCard: React.FC<LogCardProps> = ({ log, onDelete }) => {
           <button
             ref={trashRef}
             onClick={() => setConfirmingDelete(true)}
-            className="text-gray-300 hover:text-red-400 transition-colors"
+            className="text-gray-300 dark:text-slate-600 hover:text-red-400 transition-colors"
             aria-label={`Delete the session from ${date.toLocaleDateString()}`}
           >
             <Trash2 size={16} />
@@ -115,28 +115,28 @@ export const LogCard: React.FC<LogCardProps> = ({ log, onDelete }) => {
       {/* Worksheet row. Sets too long for one row are split over two rather than
           squeezed; the 1px gaps over a grey backing draw the dividers. */}
       <div
-        className="grid gap-px bg-gray-100"
+        className="grid gap-px bg-gray-100 dark:bg-slate-800"
         style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
       >
         {cells.map((cell, i) => (
-          <div key={i} className="bg-white flex flex-col items-center py-2.5 px-1 min-w-0">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5 truncate md:text-xs">
+          <div key={i} className="bg-white dark:bg-slate-900 flex flex-col items-center py-2.5 px-1 min-w-0">
+            <span className="text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wider mb-0.5 truncate md:text-xs">
               {cell.label}
             </span>
-            <span className={`text-sm font-bold truncate md:text-base ${cell.highlight ? 'text-blue-600' : 'text-gray-700'}`}>
+            <span className={`text-sm font-bold truncate md:text-base ${cell.highlight ? 'text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-slate-200'}`}>
               {cell.value}
             </span>
           </div>
         ))}
         {/* Keeps the tail of a wrapped row white rather than showing the backing */}
         {Array.from({ length: fillers }, (_, i) => (
-          <div key={`filler-${i}`} className="bg-white" />
+          <div key={`filler-${i}`} className="bg-white dark:bg-slate-900" />
         ))}
       </div>
 
       {/* Notes */}
       {log.notes && (
-        <div className="px-4 py-2 border-t border-gray-100 text-xs text-gray-500 italic md:text-sm">
+        <div className="px-4 py-2 border-t border-gray-100 dark:border-slate-800 text-xs text-gray-500 dark:text-slate-400 italic md:text-sm">
           {log.notes}
         </div>
       )}

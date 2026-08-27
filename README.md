@@ -19,10 +19,25 @@ P / CP / RB / CP·EP / RB / CP / P
 | **CP / EP** | Control Pause or Extended Pause (seconds) |
 | **Notes** | Medication, physical condition, anything notable |
 
-## Configuring the format
+## Settings
 
-The gear icon on the home screen sets the shape of an exercise set, and the
-sequence follows it:
+The gear icon on the home screen opens the settings, covering both the shape of
+an exercise set and how the app looks.
+
+### Appearance
+
+- **Light** / **Dark** — pinned, whatever the device or the hour says.
+- **Match device** (the default) — follows the phone's own light/dark setting.
+- **Night hours** — dark between two hours of the day, light the rest of the
+  time; 20:00 to 07:00 unless you change it. The switch happens while the app
+  is open, mid-session included.
+
+The chosen theme is applied before the page is painted, so opening the app at
+night never flashes white.
+
+### The format
+
+The shape of an exercise set, which the sequence follows:
 
 - **Blocks** — 1 to 6 reduced-breathing chunks, each followed by a pause. The
   closing pause is always a CP; earlier ones can be CP or EP.

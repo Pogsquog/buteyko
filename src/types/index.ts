@@ -27,3 +27,22 @@ export interface SessionFormat {
   /** Regular breathing after each RB before the next pause, in seconds. 0 = off. */
   restDuration: number;
 }
+
+/** How the app decides between the light and dark palettes. */
+export type ThemeMode =
+  /** Always light. */
+  | 'light'
+  /** Always dark. */
+  | 'dark'
+  /** Whatever the device is set to. */
+  | 'system'
+  /** Dark between two hours of the day, light the rest of the time. */
+  | 'schedule';
+
+export interface ThemePreference {
+  mode: ThemeMode;
+  /** Hour of the day (0–23) the dark palette switches on under `schedule`. */
+  fromHour: number;
+  /** Hour of the day (0–23) it switches back off. */
+  toHour: number;
+}
