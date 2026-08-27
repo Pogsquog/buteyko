@@ -70,8 +70,8 @@ export const PulseInput: React.FC<PulseInputProps> = ({ label, value, onChange, 
 
   return (
     <div className="flex flex-col items-center w-full">
-      <h2 className="text-2xl font-bold text-gray-800 mb-2 md:text-3xl">{label}</h2>
-      <p className="text-sm text-gray-500 mb-6 text-center md:text-base">Beats per minute</p>
+      <h2 className="text-2xl font-bold text-gray-800 dark:text-slate-100 mb-2 md:text-3xl">{label}</h2>
+      <p className="text-sm text-gray-500 dark:text-slate-400 mb-6 text-center md:text-base">Beats per minute</p>
 
       <input
         type="number"
@@ -80,8 +80,8 @@ export const PulseInput: React.FC<PulseInputProps> = ({ label, value, onChange, 
         max={MAX_BPM}
         aria-label={`${label}, beats per minute`}
         aria-invalid={isOutOfRange}
-        className={`text-5xl w-36 py-4 text-center border-2 rounded-2xl font-mono font-bold text-gray-800 outline-none md:text-6xl md:w-44 md:py-5 ${
-          isOutOfRange ? 'border-red-300 focus:border-red-500' : 'border-blue-300 focus:border-blue-500'
+        className={`text-5xl w-36 py-4 text-center border-2 rounded-2xl font-mono font-bold text-gray-800 dark:text-slate-100 outline-none md:text-6xl md:w-44 md:py-5 ${
+          isOutOfRange ? 'border-red-300 dark:border-red-800 focus:border-red-500' : 'border-blue-300 dark:border-blue-700 focus:border-blue-500'
         }`}
         placeholder="–"
         value={shown}
@@ -89,14 +89,14 @@ export const PulseInput: React.FC<PulseInputProps> = ({ label, value, onChange, 
         onChange={e => handleDraft(e.target.value)}
       />
 
-      <p className="h-8 text-xs text-red-500 text-center flex items-center">
+      <p className="h-8 text-xs text-red-500 dark:text-red-400 text-center flex items-center">
         {isOutOfRange && `Enter a pulse between ${MIN_BPM} and ${MAX_BPM} bpm.`}
       </p>
 
       <div className="flex flex-col items-center gap-2 mb-6">
         <button
           onClick={() => setIsCounting(true)}
-          className="flex items-center gap-2 text-sm text-blue-500 hover:text-blue-700 transition-colors md:text-base"
+          className="flex items-center gap-2 text-sm text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors md:text-base"
         >
           <TimerIcon size={15} /> Count with a timer
         </button>
@@ -105,7 +105,7 @@ export const PulseInput: React.FC<PulseInputProps> = ({ label, value, onChange, 
           <button
             onClick={handleBluetooth}
             disabled={isBusy}
-            className="flex items-center gap-2 text-sm text-blue-500 hover:text-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors md:text-base"
+            className="flex items-center gap-2 text-sm text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors md:text-base"
           >
             {isBusy
               ? <><Loader2 size={15} className="animate-spin" /> {state.status === 'connecting' ? 'Connecting…' : 'Reading…'}</>
@@ -116,7 +116,7 @@ export const PulseInput: React.FC<PulseInputProps> = ({ label, value, onChange, 
       </div>
 
       {state.status === 'error' && (
-        <p className="text-xs text-red-500 mb-4 text-center max-w-xs">
+        <p className="text-xs text-red-500 dark:text-red-400 mb-4 text-center max-w-xs">
           {state.message}{' '}
           <button onClick={clearError} className="underline">Dismiss</button>
         </p>
@@ -125,7 +125,7 @@ export const PulseInput: React.FC<PulseInputProps> = ({ label, value, onChange, 
       <button
         onClick={onNext}
         disabled={isOutOfRange}
-        className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold w-full hover:bg-blue-700 active:scale-95 transition-transform disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100 md:text-lg md:py-5"
+        className="bg-blue-600 dark:bg-blue-700 text-white px-8 py-4 rounded-2xl font-bold w-full hover:bg-blue-700 dark:hover:bg-blue-600 active:scale-95 transition-transform disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100 md:text-lg md:py-5"
       >
         Next
       </button>
@@ -203,8 +203,8 @@ function PulseCounter({ label, onUse, onCancel }: PulseCounterProps) {
 
   return (
     <div className="flex flex-col items-center w-full">
-      <h2 className="text-2xl font-bold text-gray-800 mb-1 md:text-3xl">{label}</h2>
-      <p className="text-sm text-gray-500 mb-4 text-center md:text-base">
+      <h2 className="text-2xl font-bold text-gray-800 dark:text-slate-100 mb-1 md:text-3xl">{label}</h2>
+      <p className="text-sm text-gray-500 dark:text-slate-400 mb-4 text-center md:text-base">
         {isRunning
           ? 'Tap the circle on every beat'
           : isGettingReady
@@ -222,8 +222,8 @@ function PulseCounter({ label, onUse, onCancel }: PulseCounterProps) {
               onClick={() => chooseWindow(seconds)}
               className={`px-4 py-2 rounded-xl text-sm font-bold border-2 transition-colors md:text-base ${
                 countWindow === seconds
-                  ? 'border-blue-500 bg-blue-50 text-blue-600'
-                  : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400'
+                  : 'border-gray-200 dark:border-slate-700 text-gray-500 dark:text-slate-400 hover:border-gray-300 dark:hover:border-slate-600'
               }`}
             >
               {seconds} s
@@ -234,13 +234,13 @@ function PulseCounter({ label, onUse, onCancel }: PulseCounterProps) {
 
       {isDone ? (
         <>
-          <div className="text-7xl font-mono font-bold tabular-nums text-gray-800 mb-1 md:text-8xl">{bpm}</div>
-          <p className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-5">bpm</p>
+          <div className="text-7xl font-mono font-bold tabular-nums text-gray-800 dark:text-slate-100 mb-1 md:text-8xl">{bpm}</div>
+          <p className="text-sm font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wider mb-5">bpm</p>
 
           <div className="flex items-center gap-4 mb-6">
             <button
               onClick={() => setBeats(b => Math.max(0, b - 1))}
-              className="p-3 rounded-xl bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+              className="p-3 rounded-xl bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors"
               aria-label="One beat fewer"
             >
               <Minus size={18} />
@@ -252,35 +252,35 @@ function PulseCounter({ label, onUse, onCancel }: PulseCounterProps) {
                 min={0}
                 max={MAX_BEATS}
                 aria-label="Beats counted"
-                className="text-3xl w-24 py-2 text-center border-2 border-gray-200 rounded-xl font-mono font-bold text-gray-700 focus:border-blue-500 outline-none"
+                className="text-3xl w-24 py-2 text-center border-2 border-gray-200 dark:border-slate-700 rounded-xl font-mono font-bold text-gray-700 dark:text-slate-200 focus:border-blue-500 outline-none"
                 value={beats}
                 onChange={e => setBeats(clampBeats(parseInt(e.target.value, 10)))}
               />
-              <span className="text-sm font-semibold text-gray-400">beats</span>
+              <span className="text-sm font-semibold text-gray-400 dark:text-slate-500">beats</span>
             </div>
             <button
               onClick={() => setBeats(b => clampBeats(b + 1))}
-              className="p-3 rounded-xl bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+              className="p-3 rounded-xl bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors"
               aria-label="One beat more"
             >
               <Plus size={18} />
             </button>
           </div>
 
-          <p className="h-8 text-xs text-red-500 text-center flex items-center">
+          <p className="h-8 text-xs text-red-500 dark:text-red-400 text-center flex items-center">
             {!bpmIsPlausible && `${bpm} bpm is outside ${MIN_BPM}–${MAX_BPM} — check the count.`}
           </p>
 
           <button
             onClick={() => onUse(bpm)}
             disabled={!bpmIsPlausible}
-            className="bg-green-500 text-white px-8 py-4 rounded-2xl font-bold w-full hover:bg-green-600 active:scale-95 transition-transform disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100 md:text-lg md:py-5"
+            className="bg-green-500 dark:bg-green-700 text-white px-8 py-4 rounded-2xl font-bold w-full hover:bg-green-600 active:scale-95 transition-transform disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100 md:text-lg md:py-5"
           >
             Use {bpm} bpm
           </button>
           <button
             onClick={begin}
-            className="mt-4 text-sm text-gray-400 hover:text-gray-600 font-medium transition-colors md:text-base"
+            className="mt-4 text-sm text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 font-medium transition-colors md:text-base"
           >
             Count again
           </button>
@@ -291,14 +291,26 @@ function PulseCounter({ label, onUse, onCancel }: PulseCounterProps) {
             onClick={() => { if (isRunning) setBeats(b => clampBeats(b + 1)); else if (isGettingReady) cancelCountdown(); else begin(); }}
             className={`w-44 h-44 rounded-full border-4 flex flex-col items-center justify-center mb-6 transition-colors select-none active:scale-95 md:w-52 md:h-52 ${
               isRunning
-                ? 'border-rose-300 bg-rose-50 text-rose-600'
-                : 'border-blue-200 bg-blue-50 text-blue-600 hover:border-blue-300'
+                ? 'border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-300'
+                : 'border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 hover:border-blue-300 dark:hover:border-blue-600'
             }`}
           >
             {isRunning ? (
               <>
-                <span className="text-6xl font-mono font-bold tabular-nums md:text-7xl">{beats}</span>
-                <span className="text-xs font-semibold uppercase tracking-wider mt-1">beats · {remaining} s left</span>
+                {/* Time left is what the count is racing, so it gets the big
+                    numerals; the tally only has to confirm the tap landed. */}
+                <span
+                  className="text-6xl font-mono font-bold tabular-nums md:text-7xl"
+                  role="timer"
+                  aria-live="off"
+                >
+                  {remaining}
+                </span>
+                <span className="text-xs font-semibold uppercase tracking-wider mt-0.5">seconds left</span>
+                <span className="mt-2 flex items-baseline gap-1.5">
+                  <span className="text-2xl font-mono font-bold tabular-nums md:text-3xl">{beats}</span>
+                  <span className="text-xs font-semibold uppercase tracking-wider">beats</span>
+                </span>
               </>
             ) : isGettingReady ? (
               <>
@@ -315,7 +327,7 @@ function PulseCounter({ label, onUse, onCancel }: PulseCounterProps) {
             )}
           </button>
 
-          <p className="text-xs text-gray-400 text-center max-w-xs leading-relaxed mb-2">
+          <p className="text-xs text-gray-400 dark:text-slate-500 text-center max-w-xs leading-relaxed mb-2">
             {isRunning
               ? 'Keep tapping until the chime — the count is scaled to a full minute.'
               : isGettingReady
@@ -327,7 +339,7 @@ function PulseCounter({ label, onUse, onCancel }: PulseCounterProps) {
 
       <button
         onClick={onCancel}
-        className="mt-2 flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 font-medium transition-colors md:text-base"
+        className="mt-2 flex items-center gap-1.5 text-sm text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 font-medium transition-colors md:text-base"
       >
         <X size={15} /> Enter the number instead
       </button>

@@ -75,10 +75,10 @@ export default function NewSessionPage() {
   // the first paint is the app rather than a blank screen.
   if (!isLoaded) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-950 p-4 md:p-8">
         <div className="max-w-md mx-auto md:max-w-xl">
-          <div className="bg-white p-8 rounded-3xl shadow-lg border border-gray-100 min-h-[380px] flex items-center justify-center md:p-12 md:min-h-[460px]">
-            <Loader2 size={28} className="animate-spin text-gray-300" />
+          <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-lg border border-gray-100 dark:border-slate-800 min-h-[380px] flex items-center justify-center md:p-12 md:min-h-[460px]">
+            <Loader2 size={28} className="animate-spin text-gray-300 dark:text-slate-600" />
           </div>
         </div>
       </div>
@@ -235,8 +235,8 @@ function SessionFlow({ format: initialFormat }: { format: SessionFormat }) {
         const index = step.block;
         return (
           <div className="flex flex-col items-center w-full">
-            <h2 className="text-2xl font-bold text-gray-800 mb-2 md:text-3xl">Pause Type</h2>
-            <p className="text-sm text-gray-500 mb-8 text-center md:text-base">
+            <h2 className="text-2xl font-bold text-gray-800 dark:text-slate-100 mb-2 md:text-3xl">Pause Type</h2>
+            <p className="text-sm text-gray-500 dark:text-slate-400 mb-8 text-center md:text-base">
               Select the type of pause for this exercise set
             </p>
             <div className="grid grid-cols-2 gap-4 w-full">
@@ -246,13 +246,13 @@ function SessionFlow({ format: initialFormat }: { format: SessionFormat }) {
                   onClick={() => { updateBlock(index, { pauseType: type }); next(); }}
                   className={`p-8 rounded-2xl border-2 font-bold text-2xl active:scale-95 transition-transform md:text-3xl md:p-10 ${
                     blocks[index].pauseType === type
-                      ? 'border-blue-200 bg-blue-50 text-blue-700 hover:border-blue-400'
-                      : 'border-gray-200 text-gray-600 hover:border-gray-400'
+                      ? 'border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-200 hover:border-blue-400 dark:hover:border-blue-600'
+                      : 'border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-300 hover:border-gray-400 dark:hover:border-slate-500'
                   }`}
                 >
                   {type}
                   <p className={`text-xs font-normal mt-1 md:text-sm ${
-                    blocks[index].pauseType === type ? 'text-blue-500' : 'text-gray-500'
+                    blocks[index].pauseType === type ? 'text-blue-500 dark:text-blue-400' : 'text-gray-500 dark:text-slate-400'
                   }`}>
                     {type === 'CP' ? 'Control Pause' : 'Extended Pause'}
                   </p>
@@ -295,12 +295,12 @@ function SessionFlow({ format: initialFormat }: { format: SessionFormat }) {
       case 'NOTES':
         return (
           <div className="flex flex-col items-center w-full">
-            <h2 className="text-2xl font-bold text-gray-800 mb-2 md:text-3xl">Notes</h2>
-            <p className="text-sm text-gray-500 mb-6 text-center md:text-base">
+            <h2 className="text-2xl font-bold text-gray-800 dark:text-slate-100 mb-2 md:text-3xl">Notes</h2>
+            <p className="text-sm text-gray-500 dark:text-slate-400 mb-6 text-center md:text-base">
               Medication, physical condition, anything notable
             </p>
             <textarea
-              className="w-full h-32 p-4 border-2 border-gray-200 rounded-2xl mb-6 focus:border-blue-500 outline-none resize-none text-gray-700 md:h-40 md:text-base"
+              className="w-full h-32 p-4 border-2 border-gray-200 dark:border-slate-700 rounded-2xl mb-6 focus:border-blue-500 outline-none resize-none text-gray-700 dark:text-slate-200 md:h-40 md:text-base"
               placeholder={`e.g. RB ${fmtDuration(format.rbDuration)} @ 18:00, felt congested...`}
               defaultValue={notes}
               onChange={e => setNotes(e.target.value)}
@@ -308,7 +308,7 @@ function SessionFlow({ format: initialFormat }: { format: SessionFormat }) {
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="flex items-center justify-center gap-2 bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold w-full hover:bg-blue-700 active:scale-95 transition-transform disabled:opacity-70 disabled:cursor-not-allowed disabled:active:scale-100 md:text-lg md:py-5"
+              className="flex items-center justify-center gap-2 bg-blue-600 dark:bg-blue-700 text-white px-8 py-4 rounded-2xl font-bold w-full hover:bg-blue-700 dark:hover:bg-blue-600 active:scale-95 transition-transform disabled:opacity-70 disabled:cursor-not-allowed disabled:active:scale-100 md:text-lg md:py-5"
             >
               {isSaving
                 ? <><Loader2 size={20} className="animate-spin" /> Saving…</>
@@ -316,12 +316,12 @@ function SessionFlow({ format: initialFormat }: { format: SessionFormat }) {
               }
             </button>
             {saveIsSlow && !saveFailed && (
-              <p className="mt-3 text-xs text-gray-400 text-center md:text-sm">
+              <p className="mt-3 text-xs text-gray-400 dark:text-slate-500 text-center md:text-sm">
                 Session saved — still opening your history…
               </p>
             )}
             {saveFailed && (
-              <p className="mt-3 flex items-start gap-1.5 text-xs text-red-500 text-center md:text-sm">
+              <p className="mt-3 flex items-start gap-1.5 text-xs text-red-500 dark:text-red-400 text-center md:text-sm">
                 <AlertCircle size={14} className="shrink-0 mt-0.5" />
                 <span>
                   Could not save — your browser refused to write to storage. Free up space
@@ -335,14 +335,14 @@ function SessionFlow({ format: initialFormat }: { format: SessionFormat }) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-950 p-4 md:p-8">
       <div className="max-w-md mx-auto md:max-w-xl">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
-          <button onClick={() => router.push('/')} className="p-2 text-gray-400 hover:text-gray-600" aria-label="Close">
+          <button onClick={() => router.push('/')} className="p-2 text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300" aria-label="Close">
             <X size={24} />
           </button>
-          <span className="text-sm font-semibold text-gray-500 md:text-base">
+          <span className="text-sm font-semibold text-gray-500 dark:text-slate-400 md:text-base">
             {currentStep + 1} / {steps.length}
           </span>
           <div className="w-10" />
@@ -357,20 +357,20 @@ function SessionFlow({ format: initialFormat }: { format: SessionFormat }) {
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors md:w-10 md:h-10 md:text-sm ${
                       i < seqIndex
-                        ? 'bg-blue-200 text-blue-600'
+                        ? 'bg-blue-200 dark:bg-blue-900 text-blue-600 dark:text-blue-400'
                         : i === seqIndex
-                        ? 'bg-blue-600 text-white ring-4 ring-blue-100'
-                        : 'bg-gray-100 text-gray-400'
+                        ? 'bg-blue-600 dark:bg-blue-700 text-white ring-4 ring-blue-100 dark:ring-blue-900'
+                        : 'bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-slate-500'
                     }`}
                   >
                     {i < seqIndex ? '✓' : label.split('/')[0]}
                   </div>
-                  <span className={`text-[10px] font-semibold md:text-xs ${i === seqIndex ? 'text-blue-600' : 'text-gray-400'}`}>
+                  <span className={`text-[10px] font-semibold md:text-xs ${i === seqIndex ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-slate-500'}`}>
                     {label}
                   </span>
                 </div>
                 {i < labels.length - 1 && (
-                  <div className={`flex-1 min-w-[8px] h-px mx-1 ${i < seqIndex ? 'bg-blue-200' : 'bg-gray-200'}`} />
+                  <div className={`flex-1 min-w-[8px] h-px mx-1 ${i < seqIndex ? 'bg-blue-200 dark:bg-blue-900' : 'bg-gray-200 dark:bg-slate-700'}`} />
                 )}
               </React.Fragment>
             ))}
@@ -378,7 +378,7 @@ function SessionFlow({ format: initialFormat }: { format: SessionFormat }) {
         )}
 
         {/* Step card */}
-        <div className="bg-white p-8 rounded-3xl shadow-lg border border-gray-100 min-h-[380px] flex items-center justify-center md:p-12 md:min-h-[460px]">
+        <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-lg border border-gray-100 dark:border-slate-800 min-h-[380px] flex items-center justify-center md:p-12 md:min-h-[460px]">
           {renderStep()}
         </div>
 
@@ -387,7 +387,7 @@ function SessionFlow({ format: initialFormat }: { format: SessionFormat }) {
           {currentStep > 0 && step.kind !== 'NOTES' ? (
             <button
               onClick={back}
-              className="text-sm text-gray-400 hover:text-gray-600 font-medium md:text-base"
+              className="text-sm text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 font-medium md:text-base"
             >
               ← Back
             </button>
@@ -397,7 +397,7 @@ function SessionFlow({ format: initialFormat }: { format: SessionFormat }) {
           {currentStep === 0 && (
             <Link
               href="/settings"
-              className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 font-medium md:text-sm"
+              className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 font-medium md:text-sm"
             >
               <Settings2 size={14} /> {describeFormat(format)}
             </Link>

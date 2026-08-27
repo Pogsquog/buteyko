@@ -128,8 +128,8 @@ export const Timer: React.FC<TimerProps> = ({
   if (isManual) {
     return (
       <div className="flex flex-col items-center w-full">
-        <span className="text-base font-bold text-gray-700 mb-3 uppercase tracking-wider md:text-lg">{label}</span>
-        <p className="text-sm text-gray-500 mb-6 text-center md:text-base">
+        <span className="text-base font-bold text-gray-700 dark:text-slate-200 mb-3 uppercase tracking-wider md:text-lg">{label}</span>
+        <p className="text-sm text-gray-500 dark:text-slate-400 mb-6 text-center md:text-base">
           {manualInMinutes
             ? 'Enter how long you practised for, in minutes'
             : 'Enter the time you held for, in seconds'}
@@ -143,31 +143,31 @@ export const Timer: React.FC<TimerProps> = ({
             max={manualMax}
             step={manualInMinutes ? 0.5 : 1}
             aria-label={manualInMinutes ? 'Minutes practised' : 'Seconds held'}
-            className="text-5xl w-36 py-4 text-center border-2 border-blue-300 rounded-2xl font-mono font-bold text-gray-800 focus:border-blue-500 outline-none md:text-6xl md:w-44 md:py-5"
+            className="text-5xl w-36 py-4 text-center border-2 border-blue-300 dark:border-blue-700 rounded-2xl font-mono font-bold text-gray-800 dark:text-slate-100 focus:border-blue-500 outline-none md:text-6xl md:w-44 md:py-5"
             placeholder="–"
             value={manualValue}
             autoFocus
             onChange={e => setManualValue(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') submitManual(); }}
           />
-          <span className="text-lg font-semibold text-gray-400 md:text-xl">{manualInMinutes ? 'min' : 's'}</span>
+          <span className="text-lg font-semibold text-gray-400 dark:text-slate-500 md:text-xl">{manualInMinutes ? 'min' : 's'}</span>
         </div>
 
-        <p className="h-8 text-xs text-red-500 text-center flex items-center">
+        <p className="h-8 text-xs text-red-500 dark:text-red-400 text-center flex items-center">
           {manualIsTooLarge && `That is more than ${manualMax} ${manualInMinutes ? 'minutes' : 'seconds'}.`}
         </p>
 
         <button
           onClick={submitManual}
           disabled={!manualIsValid}
-          className="bg-blue-600 text-white px-10 py-4 rounded-2xl font-bold text-lg w-full hover:bg-blue-700 active:scale-95 transition-transform disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100 md:text-xl md:py-5"
+          className="bg-blue-600 dark:bg-blue-700 text-white px-10 py-4 rounded-2xl font-bold text-lg w-full hover:bg-blue-700 dark:hover:bg-blue-600 active:scale-95 transition-transform disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100 md:text-xl md:py-5"
         >
           Next Step
         </button>
 
         <button
           onClick={closeManual}
-          className="mt-4 flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 font-medium transition-colors md:text-base"
+          className="mt-4 flex items-center gap-1.5 text-sm text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 font-medium transition-colors md:text-base"
         >
           <TimerIcon size={15} /> Use the timer instead
         </button>
@@ -177,12 +177,12 @@ export const Timer: React.FC<TimerProps> = ({
 
   return (
     <div className="flex flex-col items-center w-full">
-      <span className="text-base font-bold text-gray-700 mb-3 uppercase tracking-wider md:text-lg">{label}</span>
+      <span className="text-base font-bold text-gray-700 dark:text-slate-200 mb-3 uppercase tracking-wider md:text-lg">{label}</span>
 
       {progress !== null && (
-        <div className="w-full bg-gray-100 rounded-full h-2 mb-4">
+        <div className="w-full bg-gray-100 dark:bg-slate-800 rounded-full h-2 mb-4">
           <div
-            className="bg-blue-500 h-2 rounded-full transition-all duration-1000 ease-linear"
+            className="bg-blue-500 dark:bg-blue-700 h-2 rounded-full transition-all duration-1000 ease-linear"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -193,11 +193,11 @@ export const Timer: React.FC<TimerProps> = ({
       {animate === 'rest' && <PulsePhase kind="rest" isRunning={isRunning} />}
 
       {instructions && (!animate || !isRunning) && elapsed === 0 && (
-        <p className="text-sm text-gray-400 text-center mb-3 max-w-xs leading-relaxed">{instructions}</p>
+        <p className="text-sm text-gray-400 dark:text-slate-500 text-center mb-3 max-w-xs leading-relaxed">{instructions}</p>
       )}
 
       <div
-        className={`text-7xl font-mono font-bold tabular-nums mb-1 md:text-8xl ${isComplete ? 'text-green-500' : 'text-gray-800'}`}
+        className={`text-7xl font-mono font-bold tabular-nums mb-1 md:text-8xl ${isComplete ? 'text-green-500 dark:text-green-400' : 'text-gray-800 dark:text-slate-100'}`}
         role="timer"
         aria-live="off"
       >
@@ -209,13 +209,13 @@ export const Timer: React.FC<TimerProps> = ({
         {isComplete ? `${label} complete` : ''}
       </div>
       <div className="h-7 mb-3 flex items-center">
-        {isComplete && <span className="text-green-500 font-semibold text-sm tracking-wide uppercase md:text-base">Complete!</span>}
+        {isComplete && <span className="text-green-500 dark:text-green-400 font-semibold text-sm tracking-wide uppercase md:text-base">Complete!</span>}
       </div>
 
       {isComplete ? (
         <button
           onClick={confirm}
-          className="bg-green-500 text-white px-10 py-4 rounded-2xl font-bold text-lg w-full hover:bg-green-600 active:scale-95 transition-transform md:text-xl md:py-5"
+          className="bg-green-500 dark:bg-green-700 text-white px-10 py-4 rounded-2xl font-bold text-lg w-full hover:bg-green-600 active:scale-95 transition-transform md:text-xl md:py-5"
         >
           Next Step
         </button>
@@ -224,7 +224,7 @@ export const Timer: React.FC<TimerProps> = ({
           <button
             onClick={reset}
             aria-label="Reset the timer"
-            className="p-4 rounded-2xl bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors md:p-5"
+            className="p-4 rounded-2xl bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors md:p-5"
           >
             <RotateCcw size={20} />
           </button>
@@ -232,8 +232,8 @@ export const Timer: React.FC<TimerProps> = ({
             onClick={toggle}
             className={`flex-1 py-4 rounded-2xl font-bold text-base transition-colors flex items-center justify-center gap-2 md:text-lg md:py-5 ${
               isRunning
-                ? 'bg-red-100 text-red-600 hover:bg-red-200'
-                : 'bg-green-100 text-green-600 hover:bg-green-200'
+                ? 'bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/50'
+                : 'bg-green-100 dark:bg-green-950/60 text-green-600 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/50'
             }`}
           >
             {isRunning
@@ -245,7 +245,7 @@ export const Timer: React.FC<TimerProps> = ({
             <button
               onClick={confirm}
               disabled={notStarted}
-              className="p-4 rounded-2xl bg-blue-500 text-white hover:bg-blue-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed md:p-5"
+              className="p-4 rounded-2xl bg-blue-500 dark:bg-blue-700 text-white hover:bg-blue-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed md:p-5"
               aria-label="Record this time"
               title={notStarted ? 'Start the timer first' : 'Record time'}
             >
@@ -254,7 +254,7 @@ export const Timer: React.FC<TimerProps> = ({
           ) : (
             <button
               onClick={confirm}
-              className="p-4 rounded-2xl bg-gray-200 text-gray-500 hover:bg-gray-300 transition-colors text-xs font-semibold md:p-5 md:text-sm"
+              className="p-4 rounded-2xl bg-gray-200 dark:bg-slate-700 text-gray-500 dark:text-slate-400 hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors text-xs font-semibold md:p-5 md:text-sm"
               aria-label={`${stopLabel} early`}
               title={`${stopLabel} early`}
             >
@@ -267,15 +267,15 @@ export const Timer: React.FC<TimerProps> = ({
       {allowManualEntry && !isComplete && (
         <button
           onClick={openManual}
-          className="mt-4 flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 font-medium transition-colors md:text-base"
+          className="mt-4 flex items-center gap-1.5 text-sm text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 font-medium transition-colors md:text-base"
         >
           <Keyboard size={15} /> Enter time manually
         </button>
       )}
 
       {currentTip && (
-        <div className="mt-4 p-3 bg-blue-50 rounded-xl border border-blue-100 w-full">
-          <p className="text-xs text-blue-600 leading-relaxed text-center">{currentTip}</p>
+        <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/40 rounded-xl border border-blue-100 dark:border-blue-900 w-full">
+          <p className="text-xs text-blue-600 dark:text-blue-400 leading-relaxed text-center">{currentTip}</p>
         </div>
       )}
     </div>

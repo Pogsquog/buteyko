@@ -1,14 +1,26 @@
 @import "tailwindcss";
 
 /*
- * Every screen paints its own light surfaces (bg-gray-50 cards on white), so
- * the palette here is deliberately light-only. A prefers-color-scheme block
- * used to set dark values that nothing consumed — no `dark:` variant exists in
- * the app — which only ever showed as a dark flash behind the page.
+ * Dark mode is a preference, not just a device setting — it can also be put on
+ * a schedule — so the `dark:` variant keys off a class the app controls rather
+ * than `prefers-color-scheme`. `useTheme` resolves the preference (including
+ * "match device") and puts the class on <html>.
  */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #f9fafb; /* gray-50, matching the app background */
   --foreground: #171717;
+}
+
+/*
+ * Night surfaces are slate rather than neutral grey: a touch of blue reads as
+ * dim rather than switched off, and it sits under the app's blue accents
+ * without fighting them.
+ */
+.dark {
+  --background: #020617; /* slate-950 */
+  --foreground: #e2e8f0; /* slate-200 */
 }
 
 @theme inline {

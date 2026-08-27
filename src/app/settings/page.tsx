@@ -2,8 +2,10 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2, Minus, Plus, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Loader2, Minus, Moon, Plus, RotateCcw, Sun } from 'lucide-react';
 import { useFormat } from '@/hooks/useFormat';
+import { useTheme } from '@/hooks/useTheme';
+import { ThemeMode } from '@/types';
 import {
   describeFormat,
   MAX_BLOCKS,
@@ -14,38 +16,147 @@ import {
   RB_PRESETS,
   REST_PRESETS,
 } from '@/lib/sessionFormat';
+import { fmtHour } from '@/lib/theme';
 import { fmtDuration } from '@/lib/time';
 import { sequenceLabels, UNDECIDED_PAUSE } from '@/lib/sequence';
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { isLoaded } = useFormat();
+  const { isLoaded: formatIsLoaded } = useFormat();
+  const { isLoaded: themeIsLoaded } = useTheme();
 
   return (
-    <main className="min-h-screen bg-gray-50 pb-12">
-      <header className="bg-white px-4 py-4 shadow-sm mb-6 sticky top-0 z-10">
+    <main className="min-h-screen bg-gray-50 pb-12 dark:bg-slate-950">
+      <header className="bg-white px-4 py-4 shadow-sm mb-6 sticky top-0 z-10 dark:bg-slate-900 dark:shadow-black/40">
         <div className="max-w-2xl mx-auto flex items-center gap-3">
           <button
             onClick={() => router.push('/')}
-            className="p-2 -ml-2 text-gray-400 hover:text-gray-600"
+            className="p-2 -ml-2 text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300"
             aria-label="Back"
           >
             <ArrowLeft size={22} />
           </button>
-          <h1 className="text-xl font-bold text-gray-800 md:text-2xl">Exercise Set Format</h1>
+          <h1 className="text-xl font-bold text-gray-800 md:text-2xl dark:text-slate-100">Settings</h1>
         </div>
       </header>
 
       {/* The frame above is drawn immediately; the controls wait for the stored
-          format, so defaults are never shown as if they were the user's own. */}
-      {isLoaded ? (
-        <FormatControls />
+          settings, so defaults are never shown as if they were the user's own. */}
+      {formatIsLoaded && themeIsLoaded ? (
+        <div className="max-w-2xl mx-auto px-4 space-y-4">
+          <AppearanceControls />
+          <FormatControls />
+        </div>
       ) : (
         <div className="max-w-2xl mx-auto px-4 flex justify-center py-20">
-          <Loader2 size={28} className="animate-spin text-gray-300" />
+          <Loader2 size={28} className="animate-spin text-gray-300 dark:text-slate-700" />
         </div>
       )}
     </main>
+  );
+}
+
+const THEME_MODE_OPTIONS: Array<{ value: ThemeMode; label: string }> = [
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+  { value: 'system', label: 'Match device' },
+  { value: 'schedule', label: 'Night hours' },
+];
+
+/** Every hour of the day, for the two ends of the night window. */
+const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
+
+function AppearanceControls() {
+  const { preference, theme, setTheme } = useTheme();
+  const isScheduled = preference.mode === 'schedule';
+  const windowIsEmpty = preference.fromHour === preference.toHour;
+
+  return (
+    <Card
+      title="Appearance"
+      hint="Dark is easier on the eyes for an evening session. Match device follows your phone's own setting; night hours switch over on a clock instead."
+    >
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+        {THEME_MODE_OPTIONS.map(option => (
+          <button
+            key={option.value}
+            onClick={() => setTheme({ mode: option.value })}
+            aria-pressed={preference.mode === option.value}
+            className={`py-3 rounded-xl text-sm font-bold border-2 transition-colors md:text-base ${
+              preference.mode === option.value
+                ? 'border-blue-500 bg-blue-50 text-blue-600 dark:border-blue-500 dark:bg-blue-950/50 dark:text-blue-300'
+                : 'border-gray-200 text-gray-500 hover:border-gray-300 dark:border-slate-700 dark:text-slate-400 dark:hover:border-slate-600'
+            }`}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+
+      {isScheduled && (
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <HourSelect
+            label="Dark from"
+            value={preference.fromHour}
+            onChange={fromHour => setTheme({ fromHour })}
+          />
+          <HourSelect
+            label="until"
+            value={preference.toHour}
+            onChange={toHour => setTheme({ toHour })}
+          />
+        </div>
+      )}
+
+      {isScheduled && windowIsEmpty && (
+        <p className="mt-3 text-xs text-amber-600 dark:text-amber-400 md:text-sm">
+          Both times are the same, so the dark theme never switches on. Pick an end time
+          later than the start.
+        </p>
+      )}
+
+      {/* What the choice above adds up to at this moment — useful when it is
+          the clock or the device, rather than the setting, that decides. */}
+      <p className="mt-4 flex items-center gap-1.5 text-xs text-gray-400 dark:text-slate-500 md:text-sm">
+        {theme === 'dark' ? <Moon size={14} /> : <Sun size={14} />}
+        Right now: {theme}
+        {isScheduled && !windowIsEmpty && (
+          <span>
+            {' '}· {theme === 'dark' ? 'back to light at ' : 'dark from '}
+            {fmtHour(theme === 'dark' ? preference.toHour : preference.fromHour)}
+          </span>
+        )}
+      </p>
+    </Card>
+  );
+}
+
+interface HourSelectProps {
+  label: string;
+  value: number;
+  onChange: (hour: number) => void;
+}
+
+function HourSelect({ label, value, onChange }: HourSelectProps) {
+  const id = React.useId();
+  return (
+    <div className="flex items-center gap-2">
+      <label className="text-sm text-gray-500 dark:text-slate-400 md:text-base" htmlFor={id}>
+        {label}
+      </label>
+      <select
+        id={id}
+        value={value}
+        onChange={e => onChange(Number(e.target.value))}
+        className="py-2 px-3 border-2 border-gray-200 rounded-xl font-mono font-bold text-gray-700 focus:border-blue-500 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:focus:border-blue-500"
+      >
+        {HOURS.map(hour => (
+          <option key={hour} value={hour}>
+            {fmtHour(hour)}
+          </option>
+        ))}
+      </select>
+    </div>
   );
 }
 
@@ -57,12 +168,12 @@ function FormatControls() {
   ).join(' / ');
 
   return (
-    <div className="max-w-2xl mx-auto px-4 space-y-4">
+    <>
       {/* Live summary of the sequence a session will follow */}
-      <section className="bg-blue-50 border border-blue-100 rounded-2xl p-4">
-        <p className="text-xs font-bold text-blue-500 uppercase tracking-widest mb-1">Your sequence</p>
-        <p className="text-sm font-bold text-blue-700 break-words md:text-base">{sequence}</p>
-        <p className="text-xs text-blue-500 mt-1">{describeFormat(format)}</p>
+      <section className="bg-blue-50 border border-blue-100 rounded-2xl p-4 dark:bg-blue-950/40 dark:border-blue-900">
+        <p className="text-xs font-bold text-blue-500 uppercase tracking-widest mb-1 dark:text-blue-400">Your sequence</p>
+        <p className="text-sm font-bold text-blue-700 break-words md:text-base dark:text-blue-200">{sequence}</p>
+        <p className="text-xs text-blue-500 mt-1 dark:text-blue-400">{describeFormat(format)}</p>
       </section>
 
       <Card
@@ -73,16 +184,16 @@ function FormatControls() {
           <button
             onClick={() => setFormat({ blocks: format.blocks - 1 })}
             disabled={format.blocks <= MIN_BLOCKS}
-            className="p-3 rounded-xl bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="p-3 rounded-xl bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
             aria-label="One block fewer"
           >
             <Minus size={20} />
           </button>
-          <span className="text-4xl font-mono font-bold text-gray-800 w-12 text-center">{format.blocks}</span>
+          <span className="text-4xl font-mono font-bold text-gray-800 w-12 text-center dark:text-slate-100">{format.blocks}</span>
           <button
             onClick={() => setFormat({ blocks: format.blocks + 1 })}
             disabled={format.blocks >= MAX_BLOCKS}
-            className="p-3 rounded-xl bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="p-3 rounded-xl bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
             aria-label="One block more"
           >
             <Plus size={20} />
@@ -133,19 +244,19 @@ function FormatControls() {
 
       <button
         onClick={resetFormat}
-        className="flex items-center justify-center gap-2 w-full py-3 text-sm font-semibold text-gray-400 hover:text-gray-600 transition-colors md:text-base"
+        className="flex items-center justify-center gap-2 w-full py-3 text-sm font-semibold text-gray-400 hover:text-gray-600 transition-colors md:text-base dark:text-slate-500 dark:hover:text-slate-300"
       >
         <RotateCcw size={15} /> Reset to the standard format
       </button>
-    </div>
+    </>
   );
 }
 
 function Card({ title, hint, children }: { title: string; hint: string; children: React.ReactNode }) {
   return (
-    <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-      <h2 className="text-base font-bold text-gray-800 mb-1 md:text-lg">{title}</h2>
-      <p className="text-xs text-gray-500 mb-4 leading-relaxed md:text-sm">{hint}</p>
+    <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 dark:bg-slate-900 dark:border-slate-800 dark:shadow-black/30">
+      <h2 className="text-base font-bold text-gray-800 mb-1 md:text-lg dark:text-slate-100">{title}</h2>
+      <p className="text-xs text-gray-500 mb-4 leading-relaxed md:text-sm dark:text-slate-400">{hint}</p>
       {children}
     </section>
   );
@@ -166,8 +277,8 @@ function ChoiceRow({ options, value, onChange }: ChoiceRowProps) {
           onClick={() => onChange(option.value)}
           className={`py-3 rounded-xl text-sm font-bold border-2 transition-colors md:text-base ${
             value === option.value
-              ? 'border-blue-500 bg-blue-50 text-blue-600'
-              : 'border-gray-200 text-gray-500 hover:border-gray-300'
+              ? 'border-blue-500 bg-blue-50 text-blue-600 dark:border-blue-500 dark:bg-blue-950/50 dark:text-blue-300'
+              : 'border-gray-200 text-gray-500 hover:border-gray-300 dark:border-slate-700 dark:text-slate-400 dark:hover:border-slate-600'
           }`}
         >
           {option.label}
@@ -213,7 +324,7 @@ function CustomDuration({ label, unit, valueSeconds, min, max, onChange }: Custo
 
   return (
     <div className="flex items-center gap-3 mt-4">
-      <label className="text-sm text-gray-500 md:text-base" htmlFor={id}>
+      <label className="text-sm text-gray-500 md:text-base dark:text-slate-400" htmlFor={id}>
         {label}
       </label>
       <input
@@ -223,14 +334,14 @@ function CustomDuration({ label, unit, valueSeconds, min, max, onChange }: Custo
         min={inUnits(min)}
         max={inUnits(max)}
         step={step}
-        className="w-24 py-2 px-3 text-center border-2 border-gray-200 rounded-xl font-mono font-bold text-gray-700 focus:border-blue-500 outline-none"
+        className="w-24 py-2 px-3 text-center border-2 border-gray-200 rounded-xl font-mono font-bold text-gray-700 focus:border-blue-500 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:placeholder:text-slate-500"
         placeholder={String(inUnits(valueSeconds))}
         value={draft}
         onChange={e => setDraft(e.target.value)}
         onBlur={commit}
         onKeyDown={e => { if (e.key === 'Enter') commit(); }}
       />
-      <span className="text-sm text-gray-400">{unit}</span>
+      <span className="text-sm text-gray-400 dark:text-slate-500">{unit}</span>
     </div>
   );
 }
