@@ -1,18 +1,31 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useLogs } from '@/hooks/useLogs';
 import { useFormat } from '@/hooks/useFormat';
 import { Timer } from '@/components/Timer';
 import { PulseInput } from '@/components/PulseInput';
-import { AlertCircle, Loader2, Save, Settings2, X } from 'lucide-react';
+import { FlowShell } from '@/components/FlowShell';
+import { ChoiceRow, CustomDuration } from '@/components/FormControls';
+import { AlertCircle, Loader2, Minus, Play, Plus, Save, Settings2 } from 'lucide-react';
 import { PauseType, SessionBlock, SessionFormat } from '@/types';
-import { blocksForFormat, describeFormat } from '@/lib/sessionFormat';
+import {
+  blocksForFormat,
+  describeFormat,
+  MAX_BLOCKS,
+  MAX_RB_DURATION,
+  MAX_REST_DURATION,
+  MIN_BLOCKS,
+  MIN_RB_DURATION,
+  RB_PRESETS,
+  REST_PRESETS,
+} from '@/lib/sessionFormat';
 import { fmtDuration } from '@/lib/time';
 import { sequenceLabels, UNDECIDED_PAUSE } from '@/lib/sequence';
 import { newSessionId } from '@/lib/session';
+import { RB_TIPS } from '@/lib/tips';
 
 type Step =
   | { kind: 'INITIAL_PULSE' }
@@ -54,38 +67,172 @@ function seqIndexOf(step: Step, blockCount: number): number {
   }
 }
 
-const RB_TIPS = [
-  'Breathe gently through your nose, keeping the volume slightly smaller than feels natural. Your breathing should be quiet and barely visible.',
-  'CO₂ is not just a waste gas — it triggers the Bohr effect: higher CO₂ allows haemoglobin to release oxygen to your tissues more readily.',
-  'A mild feeling of air hunger is normal and intentional. It signals CO₂ is rising, which is exactly the goal of this exercise.',
-  'Nasal breathing produces nitric oxide in the sinuses, which dilates airways and blood vessels. Mouth breathing bypasses this completely.',
-  'The Control Pause (CP) is a proxy for your CO₂ tolerance. Under 20 s suggests chronic over-breathing; 40 s+ is considered a healthy baseline.',
-  'A clinical trial published in the BMJ (Cooper et al., 2003) found Buteyko significantly reduced reliever inhaler use and improved quality-of-life scores.',
-  'Chronic over-breathing lowers CO₂, which constricts blood vessels and causes haemoglobin to grip oxygen more tightly — the opposite of what the body needs.',
-  'Reduced breathing gradually raises your CO₂ threshold, so your brain becomes less likely to trigger a deep-breath urge in everyday life.',
-  'Research (McHugh et al., 2003) found Buteyko practice reduced daily symptoms and improved overall breathing comfort within weeks of starting.',
-  'Consistency matters more than duration. Regular short sessions build tolerance faster than occasional long ones.',
-];
 
+/** Drawn while the settings are still being read, and while the URL is unknown. */
+function LoadingCard() {
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-950 p-4 md:p-8">
+      <div className="max-w-md mx-auto md:max-w-xl">
+        <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-lg border border-gray-100 dark:border-slate-800 min-h-[380px] flex items-center justify-center md:p-12 md:min-h-[460px]">
+          <Loader2 size={28} className="animate-spin text-gray-300 dark:text-slate-600" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * `?quick=1` skips the pre-flight card and drops straight into the set, which
+ * is what the home screen's quick start does. Reading the query string makes
+ * this subtree client-rendered, so it sits behind its own Suspense boundary and
+ * the shell is still prerendered.
+ */
 export default function NewSessionPage() {
+  return (
+    <Suspense fallback={<LoadingCard />}>
+      <NewSession />
+    </Suspense>
+  );
+}
+
+function NewSession() {
+  const isQuickStart = useSearchParams().get('quick') === '1';
   const { format: savedFormat, isLoaded } = useFormat();
+  const [hasStarted, setHasStarted] = useState(false);
 
   // The saved format decides how many steps there are, so the flow cannot be
   // built until localStorage has been read. The frame is drawn either way, so
   // the first paint is the app rather than a blank screen.
-  if (!isLoaded) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-slate-950 p-4 md:p-8">
-        <div className="max-w-md mx-auto md:max-w-xl">
-          <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-lg border border-gray-100 dark:border-slate-800 min-h-[380px] flex items-center justify-center md:p-12 md:min-h-[460px]">
-            <Loader2 size={28} className="animate-spin text-gray-300 dark:text-slate-600" />
-          </div>
-        </div>
-      </div>
-    );
-  }
+  if (!isLoaded) return <LoadingCard />;
+
+  if (!hasStarted && !isQuickStart) return <StartCard onStart={() => setHasStarted(true)} />;
 
   return <SessionFlow format={savedFormat} />;
+}
+
+/**
+ * What the set is about to be, with the shape of it adjustable on the spot —
+ * the settings screen's controls, in the one place where the answer is about to
+ * matter. Changes are saved, so the next set starts from them too.
+ */
+function StartCard({ onStart }: { onStart: () => void }) {
+  const router = useRouter();
+  const { format, setFormat } = useFormat();
+
+  const sequence = sequenceLabels(format.blocks, (_, isLast) =>
+    isLast ? 'CP' : UNDECIDED_PAUSE,
+  ).join(' / ');
+
+  return (
+    <FlowShell
+      heading="Ready"
+      onClose={() => router.push('/')}
+      footer={
+        <>
+          <div />
+          <Link
+            href="/settings"
+            className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 font-medium md:text-sm"
+          >
+            <Settings2 size={14} /> All settings
+          </Link>
+        </>
+      }
+    >
+      <div className="flex flex-col w-full">
+        <h2 className="text-2xl font-bold text-gray-800 dark:text-slate-100 mb-1 text-center md:text-3xl">
+          Exercise Set
+        </h2>
+        <p className="text-sm text-gray-500 dark:text-slate-400 mb-6 text-center md:text-base">
+          {describeFormat(format)}
+        </p>
+
+        <section className="bg-blue-50 border border-blue-100 rounded-2xl p-4 mb-6 dark:bg-blue-950/40 dark:border-blue-900">
+          <p className="text-xs font-bold text-blue-500 uppercase tracking-widest mb-1 dark:text-blue-400">
+            Your sequence
+          </p>
+          <p className="text-sm font-bold text-blue-700 break-words md:text-base dark:text-blue-200">{sequence}</p>
+        </section>
+
+        <div className="space-y-5 mb-8">
+          <Setting label="Blocks">
+            <div className="flex items-center justify-center gap-6">
+              <button
+                onClick={() => setFormat({ blocks: format.blocks - 1 })}
+                disabled={format.blocks <= MIN_BLOCKS}
+                className="p-2.5 rounded-xl bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                aria-label="One block fewer"
+              >
+                <Minus size={18} />
+              </button>
+              <span className="text-3xl font-mono font-bold text-gray-800 w-10 text-center dark:text-slate-100">
+                {format.blocks}
+              </span>
+              <button
+                onClick={() => setFormat({ blocks: format.blocks + 1 })}
+                disabled={format.blocks >= MAX_BLOCKS}
+                className="p-2.5 rounded-xl bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                aria-label="One block more"
+              >
+                <Plus size={18} />
+              </button>
+            </div>
+          </Setting>
+
+          <Setting label="Length of each block">
+            <ChoiceRow
+              options={RB_PRESETS.map(seconds => ({ value: seconds, label: fmtDuration(seconds) }))}
+              value={format.rbDuration}
+              onChange={rbDuration => setFormat({ rbDuration })}
+            />
+            <CustomDuration
+              label="Custom"
+              unit="min"
+              valueSeconds={format.rbDuration}
+              min={MIN_RB_DURATION}
+              max={MAX_RB_DURATION}
+              onChange={rbDuration => setFormat({ rbDuration })}
+            />
+          </Setting>
+
+          <Setting label="Rest after each block">
+            <ChoiceRow
+              options={REST_PRESETS.map(seconds => ({
+                value: seconds,
+                label: seconds === 0 ? 'Off' : fmtDuration(seconds),
+              }))}
+              value={format.restDuration}
+              onChange={restDuration => setFormat({ restDuration })}
+            />
+            <CustomDuration
+              label="Custom"
+              unit="s"
+              valueSeconds={format.restDuration}
+              min={0}
+              max={MAX_REST_DURATION}
+              onChange={restDuration => setFormat({ restDuration })}
+            />
+          </Setting>
+        </div>
+
+        <button
+          onClick={onStart}
+          className="flex items-center justify-center gap-2 bg-blue-600 dark:bg-blue-700 text-white px-8 py-4 rounded-2xl font-bold w-full hover:bg-blue-700 dark:hover:bg-blue-600 active:scale-95 transition-transform md:text-lg md:py-5"
+        >
+          <Play size={20} className="ml-0.5" /> Start
+        </button>
+      </div>
+    </FlowShell>
+  );
+}
+
+function Setting({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="text-xs font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wider mb-2">{label}</p>
+      {children}
+    </div>
+  );
 }
 
 function SessionFlow({ format: initialFormat }: { format: SessionFormat }) {
@@ -141,6 +288,7 @@ function SessionFlow({ format: initialFormat }: { format: SessionFormat }) {
 
     const saved = await saveLog({
       id: newSessionId(),
+      kind: 'set',
       timestamp: Date.now(),
       initialPulse: initialPulse ?? 0,
       initialCP,
@@ -334,56 +482,41 @@ function SessionFlow({ format: initialFormat }: { format: SessionFormat }) {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-950 p-4 md:p-8">
-      <div className="max-w-md mx-auto md:max-w-xl">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <button onClick={() => router.push('/')} className="p-2 text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300" aria-label="Close">
-            <X size={24} />
-          </button>
-          <span className="text-sm font-semibold text-gray-500 dark:text-slate-400 md:text-base">
-            {currentStep + 1} / {steps.length}
-          </span>
-          <div className="w-10" />
-        </div>
-
-        {/* Sequence indicator */}
-        {seqIndex >= 0 && (
-          <div className="flex items-center mb-6 px-1 overflow-x-auto">
-            {labels.map((label, i) => (
-              <React.Fragment key={i}>
-                <div className="flex flex-col items-center gap-1 shrink-0">
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors md:w-10 md:h-10 md:text-sm ${
-                      i < seqIndex
-                        ? 'bg-blue-200 dark:bg-blue-900 text-blue-600 dark:text-blue-400'
-                        : i === seqIndex
-                        ? 'bg-blue-600 dark:bg-blue-700 text-white ring-4 ring-blue-100 dark:ring-blue-900'
-                        : 'bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-slate-500'
-                    }`}
-                  >
-                    {i < seqIndex ? '✓' : label.split('/')[0]}
-                  </div>
-                  <span className={`text-[10px] font-semibold md:text-xs ${i === seqIndex ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-slate-500'}`}>
-                    {label}
-                  </span>
-                </div>
-                {i < labels.length - 1 && (
-                  <div className={`flex-1 min-w-[8px] h-px mx-1 ${i < seqIndex ? 'bg-blue-200 dark:bg-blue-900' : 'bg-gray-200 dark:bg-slate-700'}`} />
-                )}
-              </React.Fragment>
-            ))}
+  const sequenceIndicator = seqIndex >= 0 && (
+    <div className="flex items-center mb-6 px-1 overflow-x-auto">
+      {labels.map((label, i) => (
+        <React.Fragment key={i}>
+          <div className="flex flex-col items-center gap-1 shrink-0">
+            <div
+              className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors md:w-10 md:h-10 md:text-sm ${
+                i < seqIndex
+                  ? 'bg-blue-200 dark:bg-blue-900 text-blue-600 dark:text-blue-400'
+                  : i === seqIndex
+                  ? 'bg-blue-600 dark:bg-blue-700 text-white ring-4 ring-blue-100 dark:ring-blue-900'
+                  : 'bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-slate-500'
+              }`}
+            >
+              {i < seqIndex ? '✓' : label.split('/')[0]}
+            </div>
+            <span className={`text-[10px] font-semibold md:text-xs ${i === seqIndex ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-slate-500'}`}>
+              {label}
+            </span>
           </div>
-        )}
+          {i < labels.length - 1 && (
+            <div className={`flex-1 min-w-[8px] h-px mx-1 ${i < seqIndex ? 'bg-blue-200 dark:bg-blue-900' : 'bg-gray-200 dark:bg-slate-700'}`} />
+          )}
+        </React.Fragment>
+      ))}
+    </div>
+  );
 
-        {/* Step card */}
-        <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-lg border border-gray-100 dark:border-slate-800 min-h-[380px] flex items-center justify-center md:p-12 md:min-h-[460px]">
-          {renderStep()}
-        </div>
-
-        {/* Footer: format summary on the first step, back button after that */}
-        <div className="mt-6 flex justify-between items-center gap-4">
+  return (
+    <FlowShell
+      heading={`${currentStep + 1} / ${steps.length}`}
+      onClose={() => router.push('/')}
+      above={sequenceIndicator}
+      footer={
+        <>
           {currentStep > 0 && step.kind !== 'NOTES' ? (
             <button
               onClick={back}
@@ -402,8 +535,10 @@ function SessionFlow({ format: initialFormat }: { format: SessionFormat }) {
               <Settings2 size={14} /> {describeFormat(format)}
             </Link>
           )}
-        </div>
-      </div>
-    </div>
+        </>
+      }
+    >
+      {renderStep()}
+    </FlowShell>
   );
 }

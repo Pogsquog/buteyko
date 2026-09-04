@@ -15,6 +15,8 @@ export const MAX_REST_DURATION = 10 * 60;
 
 /** Common RB chunk lengths, in seconds. */
 export const RB_PRESETS = [300, 600, 900, 1200];
+/** Where a lone reduced-breathing session starts, before the user changes it. */
+export const STANDALONE_RB_DURATION = 600; // 10 minutes
 /** Common gaps between an RB chunk and the pause that follows it, in seconds. */
 export const REST_PRESETS = [0, 30, 60, 120];
 

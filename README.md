@@ -4,8 +4,22 @@ A mobile-first PWA for logging Buteyko breathing exercise sets, based on the sta
 
 ## What it tracks
 
-Each session records the full exercise set sequence — by default the worksheet's
-two reduced-breathing blocks:
+Three kinds of entry share one history:
+
+- **A full exercise set** — the worksheet row, below.
+- **A lone CP** — one control pause on its own, optionally tied to what it was
+  taken around: before or after food, talking, physical activity or anything
+  else, with room to say what that was. A CP read after a flight of stairs
+  means something different from one read cold.
+- **A lone RB** — reduced breathing practised on its own, 10 minutes by default
+  and any length you choose, on the same timer a set uses.
+
+The home screen starts a set straight away from its **Quick Start** button; the
+button at the foot of the screen opens the other three, so a single reading can
+be logged without walking through a whole set.
+
+A full set records the exercise set sequence — by default the worksheet's two
+reduced-breathing blocks:
 
 ```
 P / CP / RB / CP·EP / RB / CP / P
@@ -19,10 +33,19 @@ P / CP / RB / CP·EP / RB / CP / P
 | **CP / EP** | Control Pause or Extended Pause (seconds) |
 | **Notes** | Medication, physical condition, anything notable |
 
+## History
+
+The home screen carries the last three days, split by day, with a link through
+to the full history. The history page adds a month calendar: days that have
+entries are picked out and dotted once per entry, and choosing one narrows the
+list to that day.
+
 ## Settings
 
 The gear icon on the home screen opens the settings, covering both the shape of
-an exercise set and how the app looks.
+an exercise set and how the app looks. Starting a set from the bottom menu
+opens on a pre-flight card showing what the set is about to be, with the same
+controls to hand — Quick Start skips it.
 
 ### Appearance
 
@@ -55,9 +78,11 @@ Sessions logged before the format was configurable are read back unchanged.
   catches up the moment it is visible again.
 - The screen is held awake (where the browser supports it) while a timer runs.
 - A countdown chimes and vibrates when it finishes.
-- Pulse can be typed in, read from a Bluetooth heart-rate monitor, or counted
-  by hand against a 15 / 30 / 60 second countdown — tap the circle on each beat
-  (or type the total afterwards) and the count is scaled to beats per minute.
+- Pulse opens on a 15-second count, led in by a 5-second countdown so the phone
+  can be put down first: tap the circle on each beat (or type the total
+  afterwards) and the count is scaled to beats per minute. The window can be 30
+  or 60 seconds instead, and the number can be typed straight in or read from a
+  Bluetooth heart-rate monitor.
 
 ## Your data
 

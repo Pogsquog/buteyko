@@ -25,7 +25,10 @@ const MAX_BPM = 220;
 
 export const PulseInput: React.FC<PulseInputProps> = ({ label, value, onChange, onNext }) => {
   const { read, state, isSupported, clearError } = useHeartRate();
-  const [isCounting, setIsCounting] = useState(false);
+  // Counting against the timer is the way a pulse is actually taken, so that is
+  // what opens; typing the number is the escape hatch. A step returned to with
+  // a reading already on it shows the reading rather than starting over.
+  const [isCounting, setIsCounting] = useState(value === undefined);
   const isBusy = state.status === 'connecting' || state.status === 'reading';
 
   // The box needs its own text while it is being typed into — "" and a

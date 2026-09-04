@@ -4,25 +4,38 @@ import React from 'react';
 import Link, { useLinkStatus } from 'next/link';
 import { useLogs } from '@/hooks/useLogs';
 import { LogCard } from '@/components/LogCard';
-import { Plus, Activity, Loader2, Settings2, Wind } from 'lucide-react';
+import { StartMenu } from '@/components/StartMenu';
+import { fmtDayHeading, groupByDay } from '@/lib/day';
+import { Activity, ChevronRight, History, Loader2, Settings2, Wind, Zap } from 'lucide-react';
+
+/**
+ * Days of history the home screen carries. Enough to see how the last few days
+ * have gone at a glance; everything older lives on the history page, where
+ * there is a calendar to find it with.
+ */
+const HOME_DAYS = 3;
 
 /**
  * Swaps the icon for a spinner while the route is still loading, so a tap on a
  * slow connection visibly does something instead of looking ignored. Same
  * footprint either way, so nothing shifts.
  */
-function NewSessionIcon({ size }: { size: number }) {
+function QuickStartIcon({ size }: { size: number }) {
   const { pending } = useLinkStatus();
   return pending
     ? <Loader2 size={size} className="animate-spin" />
-    : <Plus size={size} />;
+    : <Zap size={size} />;
 }
 
 export default function Home() {
   const { logs, deleteLog, isLoaded } = useLogs();
 
+  const days = groupByDay(logs);
+  const shown = days.slice(0, HOME_DAYS);
+  const hasMore = days.length > shown.length;
+
   return (
-    <main className="min-h-screen bg-gray-50 dark:bg-slate-950 pb-28 md:pb-8">
+    <main className="min-h-screen bg-gray-50 dark:bg-slate-950 pb-28">
       <header className="bg-white dark:bg-slate-900 px-6 py-5 shadow-sm mb-6 sticky top-0 z-10 dark:shadow-black/40">
         <div className="max-w-2xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -33,17 +46,25 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-1">
             <Link
+              href="/history"
+              className="p-2.5 text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 transition-colors"
+              aria-label="History"
+            >
+              <History size={22} />
+            </Link>
+            <Link
               href="/settings"
               className="p-2.5 text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 transition-colors"
               aria-label="Settings"
             >
               <Settings2 size={22} />
             </Link>
+            {/* Straight into a set on the saved format — no pre-flight card. */}
             <Link
-              href="/new-session"
+              href="/new-session?quick=1"
               className="bg-blue-600 dark:bg-blue-700 hover:bg-blue-700 dark:hover:bg-blue-600 text-white px-5 py-2.5 rounded-xl font-semibold shadow-md transition-transform active:scale-95 flex items-center gap-2 text-sm md:text-base md:px-6 md:py-3"
             >
-              <NewSessionIcon size={18} /> New Session
+              <QuickStartIcon size={18} /> Quick Start
             </Link>
           </div>
         </div>
@@ -68,24 +89,31 @@ export default function Home() {
             </Link>
           </div>
         ) : (
-          <div className="space-y-3">
-            <h2 className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-widest mb-2 px-1 md:text-sm">History</h2>
-            {logs.map(log => (
-              <LogCard key={log.id} log={log} onDelete={deleteLog} />
+          <div className="space-y-6">
+            {shown.map(day => (
+              <section key={day.key} className="space-y-3">
+                <h2 className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-widest px-1 md:text-sm">
+                  {fmtDayHeading(day.key)}
+                </h2>
+                {day.entries.map(entry => (
+                  <LogCard key={entry.id} log={entry} onDelete={deleteLog} showDate={false} />
+                ))}
+              </section>
             ))}
+
+            {hasMore && (
+              <Link
+                href="/history"
+                className="flex items-center justify-center gap-1 py-3 text-sm font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 md:text-base"
+              >
+                View all history <ChevronRight size={16} />
+              </Link>
+            )}
           </div>
         )}
       </div>
 
-      {/* FAB — only visible on mobile where the header button is small */}
-      <div className="fixed bottom-6 right-6 left-6 max-w-2xl mx-auto md:hidden">
-        <Link
-          href="/new-session"
-          className="w-full bg-blue-600 dark:bg-blue-700 hover:bg-blue-700 dark:hover:bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-xl flex items-center justify-center gap-2 transition-transform active:scale-95"
-        >
-          <NewSessionIcon size={20} /> New Exercise Set
-        </Link>
-      </div>
+      <StartMenu />
     </main>
   );
 }

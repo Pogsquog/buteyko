@@ -7,16 +7,54 @@ export interface SessionBlock {
   pauseValue: number; // in seconds
 }
 
-export interface Session {
+/** Whether a lone reading was taken before or after the activity it is paired with. */
+export type ActivityRelation = 'before' | 'after';
+
+/** The kinds of activity a CP is worth reading around. */
+export type ActivityKind = 'food' | 'talking' | 'physical' | 'other';
+
+/** What a lone CP was measured around, when the user bothered to say. */
+export interface ActivityContext {
+  relation: ActivityRelation;
+  kind: ActivityKind;
+  /** Free text — what the activity actually was. Carries "other" on its own. */
+  detail: string;
+}
+
+interface EntryBase {
   id: string;
   timestamp: number;
+  notes: string;
+}
+
+/** A full exercise set: one row of the worksheet. */
+export interface Session extends EntryBase {
+  kind: 'set';
   initialPulse: number;
   initialCP: number;
   /** RB / pause pairs, in order. The last pause is the closing CP. */
   blocks: SessionBlock[];
   finalPulse: number;
-  notes: string;
 }
+
+/** A control pause taken on its own, away from a set. */
+export interface CPEntry extends EntryBase {
+  kind: 'cp';
+  cp: number; // in seconds
+  /** Null when the reading was not tied to anything in particular. */
+  activity: ActivityContext | null;
+}
+
+/** Reduced breathing practised on its own. */
+export interface RBEntry extends EntryBase {
+  kind: 'rb';
+  rbDuration: number; // in seconds
+}
+
+/** Anything the history can hold. */
+export type LogEntry = Session | CPEntry | RBEntry;
+
+export type EntryKind = LogEntry['kind'];
 
 /** User-configurable shape of an exercise set. */
 export interface SessionFormat {
