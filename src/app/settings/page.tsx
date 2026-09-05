@@ -3,6 +3,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ChevronRight, CloudUpload, Loader2, Minus, Moon, Plus, RotateCcw, Sun } from 'lucide-react';
+import { AuthStatus, useAuth } from '@/hooks/useAuth';
 import { useFormat } from '@/hooks/useFormat';
 import { useTheme } from '@/hooks/useTheme';
 import { ThemeMode } from '@/types';
@@ -58,23 +59,59 @@ export default function SettingsPage() {
   );
 }
 
-/** The account screen owns the detail; this is only the way in. */
+/**
+ * The account screen owns the detail; this is only the way in — and the one
+ * place in the app that answers "am I signed in, and as whom?" without a tap.
+ */
 function SyncLink() {
   const router = useRouter();
+  const { status, user } = useAuth();
+
   return (
     <button
       onClick={() => router.push('/account')}
       className="flex w-full items-center gap-3 bg-white rounded-2xl border border-gray-100 shadow-sm p-5 text-left hover:border-gray-200 transition-colors dark:bg-slate-900 dark:border-slate-800 dark:shadow-black/30 dark:hover:border-slate-700"
     >
       <CloudUpload size={20} className="shrink-0 text-blue-500" />
-      <span className="flex-1">
+      <span className="flex-1 min-w-0">
         <span className="block text-base font-bold text-gray-800 md:text-lg dark:text-slate-100">Sync</span>
         <span className="block text-xs text-gray-500 leading-relaxed md:text-sm dark:text-slate-400">
           Back your history up and read it on your other devices.
         </span>
+        <SignInStatus status={status} email={user?.email ?? null} />
       </span>
       <ChevronRight size={18} className="shrink-0 text-gray-300 dark:text-slate-600" />
     </button>
+  );
+}
+
+/**
+ * A quiet line rather than a badge: knowing which address the readings are
+ * going to matters on the two devices where it is wrong, and nowhere else.
+ *
+ * Silent while the stored session is still being restored, so the row never
+ * says "not signed in" to somebody who is.
+ */
+function SignInStatus({ status, email }: { status: AuthStatus; email: string | null }) {
+  if (status === 'loading' || status === 'unconfigured') return null;
+
+  const signedIn = status === 'signedIn';
+  return (
+    <span className="mt-1.5 flex items-center gap-1.5 text-xs text-gray-400 md:text-sm dark:text-slate-500">
+      <span
+        aria-hidden
+        className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+          signedIn ? 'bg-green-500' : 'bg-gray-300 dark:bg-slate-600'
+        }`}
+      />
+      {signedIn ? (
+        <span className="truncate">
+          Signed in as <span className="text-gray-500 dark:text-slate-400">{email}</span>
+        </span>
+      ) : (
+        <span className="truncate">Not signed in</span>
+      )}
+    </span>
   );
 }
 

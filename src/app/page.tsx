@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link, { useLinkStatus } from 'next/link';
+import { useAuth } from '@/hooks/useAuth';
 import { useLogs } from '@/hooks/useLogs';
 import { LogCard } from '@/components/LogCard';
 import { StartMenu } from '@/components/StartMenu';
@@ -25,6 +26,44 @@ function QuickStartIcon({ size }: { size: number }) {
   return pending
     ? <Loader2 size={size} className="animate-spin" />
     : <Zap size={size} />;
+}
+
+/**
+ * The gear, with the sign-in state as a dot on its corner: whether the history
+ * is syncing, and to whom, lives one tap away in Settings, so the dot only has
+ * to say that there is something there worth looking at.
+ *
+ * Undotted while the stored session is still being restored, so a signed-in
+ * user is never briefly shown the signed-out dot.
+ */
+function SettingsLink() {
+  const { status, user } = useAuth();
+  const signedIn = status === 'signedIn';
+  const showDot = signedIn || status === 'signedOut';
+
+  return (
+    <Link
+      href="/settings"
+      className="relative p-2.5 text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 transition-colors"
+      aria-label={
+        signedIn
+          ? `Settings — signed in as ${user?.email ?? 'your account'}`
+          : showDot
+            ? 'Settings — not signed in'
+            : 'Settings'
+      }
+    >
+      <Settings2 size={22} />
+      {showDot && (
+        <span
+          aria-hidden
+          className={`absolute top-1.5 right-1.5 h-2 w-2 rounded-full ring-2 ring-white dark:ring-slate-900 ${
+            signedIn ? 'bg-green-500' : 'bg-gray-300 dark:bg-slate-600'
+          }`}
+        />
+      )}
+    </Link>
+  );
 }
 
 export default function Home() {
@@ -52,13 +91,7 @@ export default function Home() {
             >
               <History size={22} />
             </Link>
-            <Link
-              href="/settings"
-              className="p-2.5 text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 transition-colors"
-              aria-label="Settings"
-            >
-              <Settings2 size={22} />
-            </Link>
+            <SettingsLink />
             {/* Straight into a set on the saved format — no pre-flight card. */}
             <Link
               href="/new-session?quick=1"
