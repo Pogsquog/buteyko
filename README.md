@@ -86,9 +86,50 @@ Sessions logged before the format was configurable are read back unchanged.
 
 ## Your data
 
-Everything is kept in `localStorage` on the device, unencrypted, and never
-leaves it — there is no account, no server and no analytics. That also means
-there is no backup: clearing site data for this origin deletes your history.
+Everything is kept in `localStorage` on the device, unencrypted. There is no
+analytics, and signed out there is still no account and no server: the app
+behaves exactly as it always has, and clearing site data for this origin
+deletes your history.
+
+Sync (Settings → Sync) changes only that last part. Enter an email, open the
+link it sends, and your readings are copied to a Supabase project as well as
+kept on the device — so they survive a cleared browser and appear on any other
+device you sign in from. There is no password to choose or forget; the emailed
+link is the sign-in.
+
+The device stays in charge. localStorage remains the store the app reads and
+writes, so everything works offline exactly as before and readings taken with
+no connection upload themselves when one returns. Signing out stops the syncing
+and touches nothing on the device.
+
+Deleting a reading marks it deleted rather than dropping it, and the marker is
+kept for 90 days — long enough for the deletion to reach a device that was
+switched off when you made it.
+
+Settings → Sync also has **Download** and **Restore**, which need no account and
+no network. Download writes the whole history to a dated JSON file; Restore reads
+one back and *merges* it with what is already on the device — an entry in the
+file that is not here is added, and where both hold the same one the more
+recently changed wins. It cannot overwrite or delete a reading. The file carries
+deletion markers too, so restoring an old backup does not resurrect readings you
+removed after taking it.
+
+### Setting up sync
+
+Sync is off unless the build is given a project. Copy `.env.example` to
+`.env.local` and fill in the two values from the Supabase dashboard
+(Project Settings → API); with them unset the app builds and runs local-only.
+
+The project needs, under Authentication → URL Configuration:
+
+- **Site URL** set to the deployed origin — if it is left at `http://localhost:3000`,
+  every link the app emails will land there instead.
+- `<origin>/account` and `http://localhost:3000/account` in the **redirect
+  allowlist**, which is where the link returns to.
+
+The table is `public.buteyko_log_entries`, with row-level security allowing each
+user only their own rows. The publishable key is inlined into the static export,
+which is what it is for — that policy is what protects the data, not the key.
 
 ## Running
 
@@ -133,5 +174,5 @@ both maintained by hand:
 - React 19
 - Tailwind CSS v4
 - Lucide icons
-- localStorage persistence
+- localStorage persistence, mirrored to Supabase when signed in
 - Vitest for tests

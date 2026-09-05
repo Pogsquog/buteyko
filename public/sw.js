@@ -18,7 +18,7 @@
  * Bump CACHE_VERSION to evict every cache on the next activation.
  */
 
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const ASSET_CACHE = `buteyko-assets-${CACHE_VERSION}`;
 const PAGE_CACHE = `buteyko-pages-${CACHE_VERSION}`;
 const CURRENT_CACHES = [ASSET_CACHE, PAGE_CACHE];
@@ -31,7 +31,11 @@ const START_URL = '/';
 const PRECACHE_URLS = [
   START_URL,
   '/new-session',
+  '/log-cp',
+  '/log-rb',
+  '/history',
   '/settings',
+  '/account',
   '/manifest.webmanifest',
   '/icon-192x192.png',
 ];

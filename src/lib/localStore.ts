@@ -72,8 +72,14 @@ export function createLocalStore<T>({ key, parse, fallback }: LocalStoreOptions<
   const notify = () => listeners.forEach(l => l());
 
   const write = (value: T): boolean => {
+    const next = JSON.stringify(value);
     try {
-      localStorage.setItem(key, JSON.stringify(value));
+      // A write that changes nothing should wake nobody. Beyond saving a
+      // pointless render, this is what stops a subscriber that writes back —
+      // the sync engine merging pulled entries into the same list it is
+      // subscribed to — from retriggering itself forever.
+      if (next === localStorage.getItem(key)) return true;
+      localStorage.setItem(key, next);
     } catch (e) {
       // Safari's private mode and a full quota both throw here. Callers need
       // to know, because a session that failed to save must not look saved.

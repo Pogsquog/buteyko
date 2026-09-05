@@ -8,6 +8,8 @@ const at = (timestamp: number, id = String(timestamp)): LogEntry => ({
   timestamp,
   cp: 20,
   activity: null,
+  updatedAt: timestamp,
+  deletedAt: null,
   notes: '',
 });
 

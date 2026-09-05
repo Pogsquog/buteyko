@@ -25,6 +25,18 @@ interface EntryBase {
   id: string;
   timestamp: number;
   notes: string;
+  /**
+   * Device clock at the last local change. The tiebreaker when two devices have
+   * both touched the same entry; `timestamp` cannot serve, because it records
+   * when the reading was taken and never changes afterwards.
+   */
+  updatedAt: number;
+  /**
+   * Set when the entry is deleted locally. The entry is kept as a tombstone
+   * rather than dropped, so the deletion can reach a device that was offline
+   * when it happened. Hidden everywhere in the UI.
+   */
+  deletedAt: number | null;
 }
 
 /** A full exercise set: one row of the worksheet. */
@@ -53,6 +65,16 @@ export interface RBEntry extends EntryBase {
 
 /** Anything the history can hold. */
 export type LogEntry = Session | CPEntry | RBEntry;
+
+/** Distributes over a union, so each member is narrowed rather than collapsed. */
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
+
+/**
+ * An entry as the logging screens build it. The sync fields are stamped by
+ * `saveLog`, not by the caller — the screens have no business deciding them,
+ * and would only ever get them wrong.
+ */
+export type NewLogEntry = DistributiveOmit<LogEntry, 'updatedAt' | 'deletedAt'>;
 
 export type EntryKind = LogEntry['kind'];
 

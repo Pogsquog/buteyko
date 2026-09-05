@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { ServiceWorkerRegistrar } from '@/components/ServiceWorkerRegistrar';
+import { SyncController } from '@/components/SyncController';
 import { ThemeController } from '@/components/ThemeController';
 import { THEME_COLORS } from '@/lib/theme';
 import { THEME_SCRIPT } from '@/lib/themeScript';
@@ -58,6 +59,7 @@ export default function RootLayout({
         {children}
         <ThemeController />
         <ServiceWorkerRegistrar />
+        <SyncController />
       </body>
     </html>
   );

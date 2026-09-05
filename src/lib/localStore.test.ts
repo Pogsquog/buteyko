@@ -70,3 +70,35 @@ describe('set', () => {
     expect(seen).toEqual([5]);
   });
 });
+
+// The sync engine subscribes to the same store it writes pulled entries into.
+// Without this, every sync woke itself up again and never finished.
+describe('a write that changes nothing', () => {
+  it('does not wake subscribers', () => {
+    const store = createLocalStore<number>({ key: 'k', parse: Number, fallback: 0 });
+    store.set(7);
+
+    const listener = vi.fn();
+    store.subscribe(listener);
+    store.set(7);
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it('still wakes them when the value actually changes', () => {
+    const store = createLocalStore<number>({ key: 'k', parse: Number, fallback: 0 });
+    store.set(7);
+
+    const listener = vi.fn();
+    store.subscribe(listener);
+    store.set(8);
+
+    expect(listener).toHaveBeenCalledOnce();
+  });
+
+  it('reports success, because the stored value is the one asked for', () => {
+    const store = createLocalStore<number>({ key: 'k', parse: Number, fallback: 0 });
+    store.set(7);
+    expect(store.set(7)).toBe(true);
+  });
+});

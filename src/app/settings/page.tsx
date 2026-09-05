@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2, Minus, Moon, Plus, RotateCcw, Sun } from 'lucide-react';
+import { ArrowLeft, ChevronRight, CloudUpload, Loader2, Minus, Moon, Plus, RotateCcw, Sun } from 'lucide-react';
 import { useFormat } from '@/hooks/useFormat';
 import { useTheme } from '@/hooks/useTheme';
 import { ThemeMode } from '@/types';
@@ -45,6 +45,7 @@ export default function SettingsPage() {
           settings, so defaults are never shown as if they were the user's own. */}
       {formatIsLoaded && themeIsLoaded ? (
         <div className="max-w-2xl mx-auto px-4 space-y-4">
+          <SyncLink />
           <AppearanceControls />
           <FormatControls />
         </div>
@@ -54,6 +55,26 @@ export default function SettingsPage() {
         </div>
       )}
     </main>
+  );
+}
+
+/** The account screen owns the detail; this is only the way in. */
+function SyncLink() {
+  const router = useRouter();
+  return (
+    <button
+      onClick={() => router.push('/account')}
+      className="flex w-full items-center gap-3 bg-white rounded-2xl border border-gray-100 shadow-sm p-5 text-left hover:border-gray-200 transition-colors dark:bg-slate-900 dark:border-slate-800 dark:shadow-black/30 dark:hover:border-slate-700"
+    >
+      <CloudUpload size={20} className="shrink-0 text-blue-500" />
+      <span className="flex-1">
+        <span className="block text-base font-bold text-gray-800 md:text-lg dark:text-slate-100">Sync</span>
+        <span className="block text-xs text-gray-500 leading-relaxed md:text-sm dark:text-slate-400">
+          Back your history up and read it on your other devices.
+        </span>
+      </span>
+      <ChevronRight size={18} className="shrink-0 text-gray-300 dark:text-slate-600" />
+    </button>
   );
 }
 

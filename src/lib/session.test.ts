@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { newSessionId, normalizeEntries, normalizeEntry } from '@/lib/session';
+import {
+  newSessionId,
+  normalizeEntries,
+  normalizeEntry,
+  TOMBSTONE_TTL_MS,
+} from '@/lib/session';
 
 /** A session in the pre-configurable-format shape. */
 const legacy = {
@@ -32,6 +37,8 @@ describe('normalizeEntry', () => {
       ],
       finalPulse: 64,
       notes: 'felt congested',
+      updatedAt: 1700000000000,
+      deletedAt: null,
     });
   });
 
@@ -50,6 +57,8 @@ describe('normalizeEntry', () => {
       blocks: [{ rbDuration: 300, pauseType: 'CP', pauseValue: 25 }],
       finalPulse: 66,
       notes: '',
+      updatedAt: 1700000000002,
+      deletedAt: null,
     };
     expect(normalizeEntry(current)).toEqual(current);
   });
@@ -80,6 +89,8 @@ describe('normalizeEntry', () => {
       blocks: [{ rbDuration: 0, pauseType: 'CP', pauseValue: 0 }],
       finalPulse: 0,
       notes: '',
+      updatedAt: 1,
+      deletedAt: null,
     });
   });
 
@@ -109,6 +120,8 @@ describe('normalizeEntry', () => {
       cp: 24,
       activity: { relation: 'after', kind: 'food', detail: 'lunch' },
       notes: 'n',
+      updatedAt: 5,
+      deletedAt: null,
     });
   });
 
@@ -131,6 +144,8 @@ describe('normalizeEntry', () => {
       timestamp: 6,
       rbDuration: 600,
       notes: '',
+      updatedAt: 6,
+      deletedAt: null,
     });
   });
 });
@@ -151,6 +166,55 @@ describe('normalizeEntries', () => {
     expect(normalizeEntries({})).toEqual([]);
     expect(normalizeEntries(null)).toEqual([]);
     expect(normalizeEntries(undefined)).toEqual([]);
+  });
+});
+
+// Sync added `updatedAt` and `deletedAt` to every entry. Everything already in
+// somebody's localStorage predates them, so the defaults are the whole of the
+// migration — if these break, existing histories break with them.
+describe('the sync fields on entries stored before sync existed', () => {
+  it('dates an old entry from when the reading was taken', () => {
+    const entry = normalizeEntry(legacy);
+    expect(entry?.updatedAt).toBe(legacy.timestamp);
+  });
+
+  it('treats an old entry as not deleted', () => {
+    expect(normalizeEntry(legacy)?.deletedAt).toBeNull();
+  });
+
+  it('keeps the fields when they are there', () => {
+    const entry = normalizeEntry({ ...legacy, updatedAt: 1700000009999, deletedAt: 1700000005555 });
+    expect(entry?.updatedAt).toBe(1700000009999);
+    expect(entry?.deletedAt).toBe(1700000005555);
+  });
+
+  it('falls back rather than trusting a non-finite value', () => {
+    const entry = normalizeEntry({ ...legacy, updatedAt: NaN, deletedAt: Infinity });
+    expect(entry?.updatedAt).toBe(legacy.timestamp);
+    expect(entry?.deletedAt).toBeNull();
+  });
+
+  it('does not drop an old entry for lacking them', () => {
+    expect(normalizeEntries([legacy]).map(e => e.id)).toEqual(['abc']);
+  });
+});
+
+describe('tombstones', () => {
+  const now = 1800000000000;
+  const tombstone = (deletedAt: number) => ({ ...legacy, id: 'gone', deletedAt });
+
+  it('keeps a recent one, so the deletion can still reach another device', () => {
+    const entries = normalizeEntries([tombstone(now - 1000)], now);
+    expect(entries.map(e => e.id)).toEqual(['gone']);
+  });
+
+  it('forgets one older than the time to live', () => {
+    expect(normalizeEntries([tombstone(now - TOMBSTONE_TTL_MS - 1)], now)).toEqual([]);
+  });
+
+  it('never forgets an entry that was not deleted', () => {
+    const ancient = { ...legacy, timestamp: 1 };
+    expect(normalizeEntries([ancient], now).map(e => e.id)).toEqual(['abc']);
   });
 });
 

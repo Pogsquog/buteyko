@@ -63,7 +63,16 @@ function normalizeActivity(value: unknown): ActivityContext | null {
   };
 }
 
-function readSet(entry: Record<string, unknown>, base: { id: string; timestamp: number; notes: string }): Session {
+/** The fields every entry carries, whatever its kind. */
+interface EntryBaseFields {
+  id: string;
+  timestamp: number;
+  notes: string;
+  updatedAt: number;
+  deletedAt: number | null;
+}
+
+function readSet(entry: Record<string, unknown>, base: EntryBaseFields): Session {
   const blocks = isLegacy(entry)
     ? legacyBlocks(entry as unknown as LegacySession)
     : Array.isArray(entry.blocks)
@@ -97,7 +106,23 @@ export function normalizeEntry(entry: unknown): LogEntry | null {
   if (typeof entry.id !== 'string' || typeof entry.timestamp !== 'number' || !Number.isFinite(entry.timestamp))
     return null;
 
-  const base = { id: entry.id, timestamp: entry.timestamp, notes: str(entry.notes) };
+  // Entries written before sync existed carry neither field. `updatedAt` falls back
+  // to the moment the reading was taken, which is the only honest answer and orders
+  // correctly against anything edited since; `deletedAt` to "not deleted". So every
+  // entry already in localStorage migrates on read, with nothing rewritten.
+  const base: EntryBaseFields = {
+    id: entry.id,
+    timestamp: entry.timestamp,
+    notes: str(entry.notes),
+    updatedAt:
+      typeof entry.updatedAt === 'number' && Number.isFinite(entry.updatedAt)
+        ? entry.updatedAt
+        : entry.timestamp,
+    deletedAt:
+      typeof entry.deletedAt === 'number' && Number.isFinite(entry.deletedAt)
+        ? entry.deletedAt
+        : null,
+  };
 
   if (entry.kind === 'cp') {
     const cp: CPEntry = { ...base, kind: 'cp', cp: num(entry.cp), activity: normalizeActivity(entry.activity) };
@@ -110,9 +135,19 @@ export function normalizeEntry(entry: unknown): LogEntry | null {
   return readSet(entry, base);
 }
 
-export function normalizeEntries(raw: unknown): LogEntry[] {
+/**
+ * How long a tombstone is kept before it is forgotten. Long enough that a device
+ * left in a drawer for a season still learns about the deletion when it wakes;
+ * short enough that deleting a lot of history eventually reclaims the space.
+ */
+export const TOMBSTONE_TTL_MS = 90 * 24 * 60 * 60 * 1000;
+
+export function normalizeEntries(raw: unknown, now = Date.now()): LogEntry[] {
   if (!Array.isArray(raw)) return [];
-  return raw.map(normalizeEntry).filter((e): e is LogEntry => e !== null);
+  return raw
+    .map(entry => normalizeEntry(entry))
+    .filter((e): e is LogEntry => e !== null)
+    .filter(e => e.deletedAt === null || now - e.deletedAt < TOMBSTONE_TTL_MS);
 }
 
 /**
