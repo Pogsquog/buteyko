@@ -91,11 +91,14 @@ analytics, and signed out there is still no account and no server: the app
 behaves exactly as it always has, and clearing site data for this origin
 deletes your history.
 
-Sync (Settings → Sync) changes only that last part. Enter an email, open the
-link it sends, and your readings are copied to a Supabase project as well as
+Sync (Settings → Sync) changes only that last part. Enter an email, type the
+code it sends, and your readings are copied to a Supabase project as well as
 kept on the device — so they survive a cleared browser and appear on any other
 device you sign in from. There is no password to choose or forget; the emailed
-link is the sign-in.
+code is the sign-in. The email carries a link too, but it only helps if it opens
+in the same browser as the app — on a phone it usually does not, and a sign-in
+that lands in a different browser finds no readings there, while the ones on
+the device stay unsigned-in. The code has no such problem.
 
 The device stays in charge. localStorage remains the store the app reads and
 writes, so everything works offline exactly as before and readings taken with
@@ -126,6 +129,10 @@ The project needs, under Authentication → URL Configuration:
   every link the app emails will land there instead.
 - `<origin>/account` and `http://localhost:3000/account` in the **redirect
   allowlist**, which is where the link returns to.
+
+And under Authentication → Email Templates, the **Magic Link** and **Confirm
+signup** templates must include `{{ .Token }}` — that is the code the app asks
+for. The default templates carry only the link.
 
 The table is `public.buteyko_log_entries`, with row-level security allowing each
 user only their own rows. The publishable key is inlined into the static export,

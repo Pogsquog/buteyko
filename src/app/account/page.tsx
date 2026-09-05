@@ -87,25 +87,44 @@ function Unconfigured() {
 }
 
 function SignIn() {
-  const { sendLink } = useAuth();
+  const { sendLink, verifyCode } = useAuth();
   const { logs } = useLogs();
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState<string | null>(null);
-  const [sending, setSending] = useState(false);
+  const [code, setCode] = useState('');
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (sending || !email.trim()) return;
-    setSending(true);
+    if (busy || !email.trim()) return;
+    setBusy(true);
     setError(null);
     try {
       await sendLink(email.trim());
       setSent(email.trim());
+      setCode('');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not send the link.');
     } finally {
-      setSending(false);
+      setBusy(false);
+    }
+  };
+
+  const submitCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const token = code.replace(/\D/g, '');
+    if (busy || !sent || token.length === 0) return;
+    setBusy(true);
+    setError(null);
+    try {
+      // Nothing to do on success: the auth listener sees the new session and
+      // the page re-renders as signed in, exactly as it does for the link.
+      await verifyCode(sent, token);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'That code did not work.');
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -113,11 +132,39 @@ function SignIn() {
     return (
       <Card
         title="Check your email"
-        hint={`A sign-in link is on its way to ${sent}. Open it on this device and you will land back here, signed in.`}
+        hint={`A message is on its way to ${sent}. Type the code from it below — that signs you in right here, where your readings are. The link in the email works too, but only if it opens in this same browser.`}
       >
+        <form onSubmit={submitCode} className="space-y-3">
+          <input
+            type="text"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            pattern="[0-9]*"
+            required
+            value={code}
+            onChange={e => setCode(e.target.value)}
+            placeholder="123456"
+            aria-label="Code from the email"
+            className="w-full py-3 px-4 border-2 border-gray-200 rounded-xl text-gray-700 tracking-widest focus:border-blue-500 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:focus:border-blue-500"
+          />
+          <button
+            type="submit"
+            disabled={busy}
+            className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-blue-500 font-bold text-white hover:bg-blue-600 disabled:opacity-50 transition-colors"
+          >
+            {busy ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+            Sign in with the code
+          </button>
+          {error && (
+            <p className="text-xs text-red-500 dark:text-red-400 md:text-sm">{error}</p>
+          )}
+        </form>
         <button
-          onClick={() => setSent(null)}
-          className="w-full py-3 text-sm font-semibold text-gray-400 hover:text-gray-600 transition-colors md:text-base dark:text-slate-500 dark:hover:text-slate-300"
+          onClick={() => {
+            setSent(null);
+            setError(null);
+          }}
+          className="w-full mt-2 py-3 text-sm font-semibold text-gray-400 hover:text-gray-600 transition-colors md:text-base dark:text-slate-500 dark:hover:text-slate-300"
         >
           Use a different address
         </button>
@@ -143,18 +190,18 @@ function SignIn() {
           />
           <button
             type="submit"
-            disabled={sending}
+            disabled={busy}
             className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-blue-500 font-bold text-white hover:bg-blue-600 disabled:opacity-50 transition-colors"
           >
-            {sending ? <Loader2 size={18} className="animate-spin" /> : <Mail size={18} />}
+            {busy ? <Loader2 size={18} className="animate-spin" /> : <Mail size={18} />}
             Email me a sign-in link
           </button>
           {error && (
             <p className="text-xs text-red-500 dark:text-red-400 md:text-sm">{error}</p>
           )}
-          {/* No password to choose, forget, or reset — the link is the sign-in. */}
+          {/* No password to choose, forget, or reset — the emailed code is the sign-in. */}
           <p className="text-xs text-gray-400 dark:text-slate-500">
-            No password needed. We email you a link and opening it signs you in.
+            No password needed. We email you a code to type in here, and a link.
           </p>
         </form>
       </Card>

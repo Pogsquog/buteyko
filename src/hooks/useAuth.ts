@@ -15,8 +15,18 @@ export type AuthStatus =
 export interface Auth {
   status: AuthStatus;
   user: User | null;
-  /** Emails a sign-in link. Rejects with a message fit to show the user. */
+  /** Emails a sign-in link and code. Rejects with a message fit to show the user. */
   sendLink: (email: string) => Promise<void>;
+  /**
+   * Signs in with the code from that email, here, in this browser.
+   *
+   * The link is the easy path and the code is the reliable one. On a phone the
+   * link opens in whatever the mail app hands it to — on iOS never the installed
+   * app and often not even the same browser — and a sign-in that lands in a
+   * different browser finds an empty history there while the real one sits
+   * unsigned-in. Typing the code keeps the sign-in where the readings are.
+   */
+  verifyCode: (email: string, code: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -59,11 +69,21 @@ export function useAuth(): Auth {
     if (error) throw new Error(error.message);
   }, []);
 
+  const verifyCode = useCallback(async (email: string, code: string) => {
+    const supabase = getSupabase();
+    if (!supabase) throw new Error('Sync is not set up in this build.');
+
+    // 'email' covers both the first sign-in (a signup token) and every later
+    // one (a magiclink token), so the screen need not know which this is.
+    const { error } = await supabase.auth.verifyOtp({ email, token: code, type: 'email' });
+    if (error) throw new Error(error.message);
+  }, []);
+
   const signOut = useCallback(async () => {
     const supabase = getSupabase();
     if (!supabase) return;
     await supabase.auth.signOut();
   }, []);
 
-  return { status, user, sendLink, signOut };
+  return { status, user, sendLink, verifyCode, signOut };
 }
