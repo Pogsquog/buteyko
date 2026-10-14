@@ -136,8 +136,8 @@ export const PulseInput: React.FC<PulseInputProps> = ({ label, value, onChange, 
   );
 };
 
-/** Counting windows, in seconds. Shorter windows are quicker; longer ones are more accurate. */
-const COUNT_WINDOWS = [15, 30, 60];
+/** Counting window, in seconds. */
+const COUNT_WINDOW = 15;
 
 /** More beats than this in a single window is a typo, not a pulse. */
 const MAX_BEATS = 300;
@@ -157,14 +157,13 @@ interface PulseCounterProps {
  * window is scaled up to beats per minute.
  */
 function PulseCounter({ label, onUse, onCancel }: PulseCounterProps) {
-  const [countWindow, setCountWindow] = useState(15);
   const [beats, setBeats] = useState(0);
   const [hasStarted, setHasStarted] = useState(false);
 
   const handleFinish = useCallback(() => playAlarm(), []);
   const { elapsed, isRunning, isComplete, start, reset } = useTimer({
     mode: 'countdown',
-    targetSeconds: countWindow,
+    targetSeconds: COUNT_WINDOW,
     onFinish: handleFinish,
   });
 
@@ -177,8 +176,8 @@ function PulseCounter({ label, onUse, onCancel }: PulseCounterProps) {
   const isGettingReady = getReadyCount !== null;
 
   const isDone = hasStarted && isComplete;
-  const remaining = Math.max(0, countWindow - elapsed);
-  const bpm = Math.round((beats * 60) / countWindow);
+  const remaining = Math.max(0, COUNT_WINDOW - elapsed);
+  const bpm = Math.round((beats * 60) / COUNT_WINDOW);
   // A miscount over a short window scales up hard — 60 beats in 15 s reads as
   // 240 bpm — so an implausible result is refused rather than recorded.
   const bpmIsPlausible = bpm >= MIN_BPM && bpm <= MAX_BPM;
@@ -197,13 +196,6 @@ function PulseCounter({ label, onUse, onCancel }: PulseCounterProps) {
     setHasStarted(false);
   };
 
-  const chooseWindow = (seconds: number) => {
-    reset();
-    setBeats(0);
-    setHasStarted(false);
-    setCountWindow(seconds);
-  };
-
   return (
     <div className="flex flex-col items-center w-full">
       <h2 className="text-2xl font-bold text-gray-800 dark:text-slate-100 mb-1 md:text-3xl">{label}</h2>
@@ -213,27 +205,9 @@ function PulseCounter({ label, onUse, onCancel }: PulseCounterProps) {
           : isGettingReady
             ? 'Get ready…'
             : isDone
-              ? `${beats} beats in ${countWindow} s`
+              ? `${beats} beats in ${COUNT_WINDOW} s`
               : 'Find your pulse, then start the countdown'}
       </p>
-
-      {!isRunning && !isDone && !isGettingReady && (
-        <div className="flex gap-2 mb-6">
-          {COUNT_WINDOWS.map(seconds => (
-            <button
-              key={seconds}
-              onClick={() => chooseWindow(seconds)}
-              className={`px-4 py-2 rounded-xl text-sm font-bold border-2 transition-colors md:text-base ${
-                countWindow === seconds
-                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400'
-                  : 'border-gray-200 dark:border-slate-700 text-gray-500 dark:text-slate-400 hover:border-gray-300 dark:hover:border-slate-600'
-              }`}
-            >
-              {seconds} s
-            </button>
-          ))}
-        </div>
-      )}
 
       {isDone ? (
         <>
@@ -325,7 +299,7 @@ function PulseCounter({ label, onUse, onCancel }: PulseCounterProps) {
             ) : (
               <>
                 <span className="text-3xl font-bold md:text-4xl">Start</span>
-                <span className="text-xs font-semibold uppercase tracking-wider mt-1">{countWindow} s count</span>
+                <span className="text-xs font-semibold uppercase tracking-wider mt-1">{COUNT_WINDOW} s count</span>
               </>
             )}
           </button>
