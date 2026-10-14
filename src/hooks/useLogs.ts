@@ -40,5 +40,14 @@ export const useLogs = () => {
     [],
   );
 
-  return { logs, saveLog, deleteLog, isLoaded };
+  /** Resolves false if the write was rejected, so the edit can stay open rather than vanish. */
+  const updateNotes = useCallback(
+    (id: string, notes: string) =>
+      logStore.update(logs =>
+        logs.map(log => (log.id === id ? { ...log, notes, updatedAt: Date.now() } : log)),
+      ),
+    [],
+  );
+
+  return { logs, saveLog, deleteLog, updateNotes, isLoaded };
 };

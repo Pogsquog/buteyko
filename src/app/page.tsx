@@ -67,7 +67,7 @@ function SettingsLink() {
 }
 
 export default function Home() {
-  const { logs, deleteLog, isLoaded } = useLogs();
+  const { logs, deleteLog, updateNotes, isLoaded } = useLogs();
 
   const days = groupByDay(logs);
   const shown = days.slice(0, HOME_DAYS);
@@ -129,7 +129,7 @@ export default function Home() {
                   {fmtDayHeading(day.key)}
                 </h2>
                 {day.entries.map(entry => (
-                  <LogCard key={entry.id} log={entry} onDelete={deleteLog} showDate={false} />
+                  <LogCard key={entry.id} log={entry} onDelete={deleteLog} onSaveNotes={updateNotes} showDate={false} />
                 ))}
               </section>
             ))}

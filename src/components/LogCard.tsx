@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Calendar, Clock, Trash2, Wind } from 'lucide-react';
+import { Calendar, Clock, Loader2, Pencil, Trash2, Wind } from 'lucide-react';
 import { LogEntry, Session } from '@/types';
 import { fmtCompact, fmtDuration, fmtSeconds } from '@/lib/time';
 import { sequenceLabels } from '@/lib/sequence';
@@ -10,6 +10,8 @@ import { describeActivity } from '@/lib/activity';
 interface LogCardProps {
   log: LogEntry;
   onDelete: (id: string) => void;
+  /** Resolves false if the write was rejected. */
+  onSaveNotes: (id: string, notes: string) => Promise<boolean>;
   /** History pages already say which day it is, so the card need not repeat it. */
   showDate?: boolean;
 }
@@ -17,9 +19,10 @@ interface LogCardProps {
 /** Beyond this many cells the row splits over two lines rather than being squeezed. */
 const MAX_CELLS_PER_ROW = 7;
 
-export const LogCard: React.FC<LogCardProps> = ({ log, onDelete, showDate = true }) => {
+export const LogCard: React.FC<LogCardProps> = ({ log, onDelete, onSaveNotes, showDate = true }) => {
   const date = new Date(log.timestamp);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [editingNotes, setEditingNotes] = useState(false);
   const trashRef = useRef<HTMLButtonElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
   const confirmRef = useRef<HTMLDivElement>(null);
@@ -87,14 +90,25 @@ export const LogCard: React.FC<LogCardProps> = ({ log, onDelete, showDate = true
             </button>
           </div>
         ) : (
-          <button
-            ref={trashRef}
-            onClick={() => setConfirmingDelete(true)}
-            className="text-gray-300 dark:text-slate-600 hover:text-red-400 transition-colors"
-            aria-label={`Delete the entry from ${date.toLocaleString()}`}
-          >
-            <Trash2 size={16} />
-          </button>
+          <div className="flex items-center gap-3">
+            {!editingNotes && (
+              <button
+                onClick={() => setEditingNotes(true)}
+                className="text-gray-300 dark:text-slate-600 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
+                aria-label={`Edit the notes for the entry from ${date.toLocaleString()}`}
+              >
+                <Pencil size={15} />
+              </button>
+            )}
+            <button
+              ref={trashRef}
+              onClick={() => setConfirmingDelete(true)}
+              className="text-gray-300 dark:text-slate-600 hover:text-red-400 transition-colors"
+              aria-label={`Delete the entry from ${date.toLocaleString()}`}
+            >
+              <Trash2 size={16} />
+            </button>
+          </div>
         )}
       </div>
 
@@ -116,7 +130,13 @@ export const LogCard: React.FC<LogCardProps> = ({ log, onDelete, showDate = true
       )}
 
       {/* Notes */}
-      {log.notes && (
+      {editingNotes ? (
+        <NotesEditor
+          initial={log.notes}
+          onSave={notes => onSaveNotes(log.id, notes)}
+          onClose={() => setEditingNotes(false)}
+        />
+      ) : log.notes && (
         <div className="px-4 py-2 border-t border-gray-100 dark:border-slate-800 text-xs text-gray-500 dark:text-slate-400 italic md:text-sm">
           {log.notes}
         </div>
@@ -124,6 +144,62 @@ export const LogCard: React.FC<LogCardProps> = ({ log, onDelete, showDate = true
     </div>
   );
 };
+
+interface NotesEditorProps {
+  initial: string;
+  onSave: (notes: string) => Promise<boolean>;
+  onClose: () => void;
+}
+
+/** Notes are the one part of an entry worth revisiting once the moment has passed. */
+function NotesEditor({ initial, onSave, onClose }: NotesEditorProps) {
+  const [draft, setDraft] = useState(initial);
+  const [isSaving, setIsSaving] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  const save = async () => {
+    const notes = draft.trim();
+    if (notes === initial) return onClose();
+    setIsSaving(true);
+    const ok = await onSave(notes);
+    setIsSaving(false);
+    // A rejected write keeps the editor open, so the typing is not lost.
+    if (ok) onClose();
+    else setFailed(true);
+  };
+
+  return (
+    <div className="px-4 py-3 border-t border-gray-100 dark:border-slate-800">
+      <textarea
+        aria-label="Notes"
+        autoFocus
+        className="w-full h-24 p-3 border-2 border-gray-200 dark:border-slate-700 rounded-xl focus:border-blue-500 outline-none resize-none text-sm text-gray-700 dark:text-slate-200 dark:bg-slate-800 md:text-base"
+        placeholder="Notes — medication, how you felt…"
+        value={draft}
+        onChange={e => setDraft(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Escape') onClose(); }}
+      />
+      {failed && (
+        <p className="text-xs text-red-500 dark:text-red-400 mt-1">Couldn&apos;t save — storage may be full.</p>
+      )}
+      <div className="flex justify-end gap-2 mt-2">
+        <button
+          onClick={onClose}
+          className="text-xs font-semibold text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 px-2 py-1 md:text-sm"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={save}
+          disabled={isSaving}
+          className="flex items-center gap-1.5 text-xs font-bold text-white bg-blue-600 dark:bg-blue-700 hover:bg-blue-700 dark:hover:bg-blue-600 rounded-lg px-3 py-1 disabled:opacity-70 md:text-sm"
+        >
+          {isSaving && <Loader2 size={12} className="animate-spin" />} Save
+        </button>
+      </div>
+    </div>
+  );
+}
 
 /** The worksheet row: P / CP / (RB / CP·EP) × n / P, values under their labels. */
 function WorksheetRow({ log }: { log: Session }) {

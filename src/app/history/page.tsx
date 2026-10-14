@@ -46,7 +46,7 @@ function monthGrid({ year, month }: Month): Array<string | null> {
 
 export default function HistoryPage() {
   const router = useRouter();
-  const { logs, deleteLog, isLoaded } = useLogs();
+  const { logs, deleteLog, updateNotes, isLoaded } = useLogs();
 
   // Read once, at mount: the calendar should not jump to a new month because
   // a render happened to land the other side of midnight on New Year's Eve.
@@ -190,7 +190,7 @@ export default function HistoryPage() {
                     {fmtDayHeading(day.key)}
                   </h2>
                   {day.entries.map(entry => (
-                    <LogCard key={entry.id} log={entry} onDelete={deleteLog} showDate={false} />
+                    <LogCard key={entry.id} log={entry} onDelete={deleteLog} onSaveNotes={updateNotes} showDate={false} />
                   ))}
                 </section>
               ))
