@@ -40,6 +40,10 @@ to the full history. The history page adds a month calendar: days that have
 entries are picked out and dotted once per entry, and choosing one narrows the
 list to that day.
 
+Each set's card has a copy button that puts the set on the clipboard as one
+line, ready to paste into a post — pulse / CP / RB (minutes) / CP·EP / RB
+(minutes) / CP / pulse, for example `72 / 25 / 10 / 32 / 10 / 35 / 68`.
+
 ## Settings
 
 The gear icon on the home screen opens the settings, covering both the shape of

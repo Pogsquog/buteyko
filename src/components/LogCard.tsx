@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Calendar, Clock, Loader2, Pencil, Trash2, Wind } from 'lucide-react';
+import { Calendar, Check, Clock, Copy, Loader2, Pencil, Trash2, Wind } from 'lucide-react';
 import { LogEntry, Session } from '@/types';
 import { fmtCompact, fmtDuration, fmtSeconds } from '@/lib/time';
 import { sequenceLabels } from '@/lib/sequence';
 import { describeActivity } from '@/lib/activity';
+import { setShareText } from '@/lib/shareText';
 
 interface LogCardProps {
   log: LogEntry;
@@ -91,6 +92,7 @@ export const LogCard: React.FC<LogCardProps> = ({ log, onDelete, onSaveNotes, sh
           </div>
         ) : (
           <div className="flex items-center gap-3">
+            {log.kind === 'set' && <CopyButton text={setShareText(log)} date={date} />}
             {!editingNotes && (
               <button
                 onClick={() => setEditingNotes(true)}
@@ -144,6 +146,41 @@ export const LogCard: React.FC<LogCardProps> = ({ log, onDelete, onSaveNotes, sh
     </div>
   );
 };
+
+/** How long the tick stays up after a copy, in ms. */
+const COPIED_FEEDBACK_MS = 2000;
+
+/** Copies a set as one line of text, ready to paste into a post. */
+function CopyButton({ text, date }: { text: string; date: Date }) {
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!copied) return;
+    const timer = setTimeout(() => setCopied(false), COPIED_FEEDBACK_MS);
+    return () => clearTimeout(timer);
+  }, [copied]);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+    } catch {
+      // No clipboard access (permission refused, or not a secure context):
+      // the button just stays as it was rather than claiming a copy.
+    }
+  };
+
+  return (
+    <button
+      onClick={copy}
+      className={`transition-colors ${copied ? 'text-green-500 dark:text-green-400' : 'text-gray-300 dark:text-slate-600 hover:text-blue-500 dark:hover:text-blue-400'}`}
+      aria-label={copied ? 'Copied' : `Copy the set from ${date.toLocaleString()} as text`}
+      title={copied ? 'Copied' : text}
+    >
+      {copied ? <Check size={15} /> : <Copy size={15} />}
+    </button>
+  );
+}
 
 interface NotesEditorProps {
   initial: string;
