@@ -6,7 +6,7 @@ import { useTimer } from '@/hooks/useTimer';
 import { useWakeLock } from '@/hooks/useWakeLock';
 import { playAlarm, primeAlarm } from '@/lib/alarm';
 import { fmtClock } from '@/lib/time';
-import { BREATH_PHASE_SECONDS, BreathPacer, PulsePhase } from '@/components/TimerPhase';
+import { BreathCircle, PulsePhase } from '@/components/TimerPhase';
 
 interface TimerProps {
   onComplete: (seconds: number) => void;
@@ -62,11 +62,6 @@ export const Timer: React.FC<TimerProps> = ({
       start();
     }
   }, [autoStart, start]);
-
-  // Derived from elapsed time rather than its own interval, so the pacer stays
-  // in step with the clock after the tab has been backgrounded.
-  const breathPhase =
-    isRunning && Math.floor(elapsed / BREATH_PHASE_SECONDS) % 2 === 1 ? 'exhale' : 'inhale';
 
   const toggle = () => {
     if (isComplete) return;
@@ -188,7 +183,7 @@ export const Timer: React.FC<TimerProps> = ({
         </div>
       )}
 
-      {animate === 'breathe' && <BreathPacer isRunning={isRunning} phase={breathPhase} />}
+      {animate === 'breathe' && <BreathCircle />}
       {animate === 'hold' && <PulsePhase kind="hold" isRunning={isRunning} />}
       {animate === 'rest' && <PulsePhase kind="rest" isRunning={isRunning} />}
 

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, ChevronRight, CloudUpload, Loader2, Minus, Moon, Plus, RotateCcw, Sun } from 'lucide-react';
 import { AuthStatus, useAuth } from '@/hooks/useAuth';
 import { useFormat } from '@/hooks/useFormat';
+import { usePulseLeadIn } from '@/hooks/usePulseLeadIn';
 import { useTheme } from '@/hooks/useTheme';
 import { ThemeMode } from '@/types';
 import {
@@ -17,6 +18,7 @@ import {
   RB_PRESETS,
   REST_PRESETS,
 } from '@/lib/sessionFormat';
+import { MAX_PULSE_LEAD_IN, PULSE_LEAD_IN_PRESETS } from '@/lib/pulseLeadIn';
 import { fmtHour } from '@/lib/theme';
 import { fmtDuration } from '@/lib/time';
 import { sequenceLabels, UNDECIDED_PAUSE } from '@/lib/sequence';
@@ -26,6 +28,7 @@ export default function SettingsPage() {
   const router = useRouter();
   const { isLoaded: formatIsLoaded } = useFormat();
   const { isLoaded: themeIsLoaded } = useTheme();
+  const { isLoaded: leadInIsLoaded } = usePulseLeadIn();
 
   return (
     <main className="min-h-screen bg-gray-50 pb-12 dark:bg-slate-950">
@@ -44,10 +47,11 @@ export default function SettingsPage() {
 
       {/* The frame above is drawn immediately; the controls wait for the stored
           settings, so defaults are never shown as if they were the user's own. */}
-      {formatIsLoaded && themeIsLoaded ? (
+      {formatIsLoaded && themeIsLoaded && leadInIsLoaded ? (
         <div className="max-w-2xl mx-auto px-4 space-y-4">
           <SyncLink />
           <AppearanceControls />
+          <PulseLeadInControls />
           <FormatControls />
         </div>
       ) : (
@@ -216,6 +220,34 @@ function HourSelect({ label, value, onChange }: HourSelectProps) {
         ))}
       </select>
     </div>
+  );
+}
+
+function PulseLeadInControls() {
+  const { leadIn, setLeadIn } = usePulseLeadIn();
+
+  return (
+    <Card
+      title="Countdown before a pulse"
+      hint="Time to put the phone down and find your pulse before the count starts."
+    >
+      <ChoiceRow
+        options={PULSE_LEAD_IN_PRESETS.map(seconds => ({
+          value: seconds,
+          label: seconds === 0 ? 'Off' : fmtDuration(seconds),
+        }))}
+        value={leadIn}
+        onChange={setLeadIn}
+      />
+      <CustomDuration
+        label="Custom countdown"
+        unit="s"
+        valueSeconds={leadIn}
+        min={0}
+        max={MAX_PULSE_LEAD_IN}
+        onChange={setLeadIn}
+      />
+    </Card>
   );
 }
 

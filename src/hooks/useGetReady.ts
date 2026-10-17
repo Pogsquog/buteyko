@@ -7,6 +7,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
  * fingers on the wrist for a pulse — so the user can put the device down
  * before the timing actually begins.
  *
+ * A lead-in of 0 seconds goes immediately, without a render in between.
+ *
  * Wall-clock based like useTimer: what matters is when "go" happens, not that
  * every tick lands, so a throttled or suspended tab still releases on time.
  */
@@ -20,6 +22,12 @@ export function useGetReady(seconds: number, onGo: () => void) {
   }, [onGo]);
 
   const begin = useCallback(() => {
+    if (seconds <= 0) {
+      endsAtRef.current = null;
+      setRemaining(null);
+      onGoRef.current();
+      return;
+    }
     endsAtRef.current = Date.now() + seconds * 1000;
     setRemaining(seconds);
   }, [seconds]);

@@ -5,6 +5,7 @@ import { Bluetooth, Loader2, Minus, Plus, Timer as TimerIcon, X } from 'lucide-r
 import { useHeartRate } from '@/hooks/useHeartRate';
 import { useTimer } from '@/hooks/useTimer';
 import { useGetReady } from '@/hooks/useGetReady';
+import { usePulseLeadIn } from '@/hooks/usePulseLeadIn';
 import { useWakeLock } from '@/hooks/useWakeLock';
 import { playAlarm, primeAlarm } from '@/lib/alarm';
 
@@ -170,9 +171,10 @@ function PulseCounter({ label, onUse, onCancel }: PulseCounterProps) {
   useWakeLock(isRunning);
 
   // Finding a pulse takes both hands and the phone out of play, so starting
-  // the count leads in with a 5-second countdown.
+  // the count leads in with a countdown, as long as the settings ask for.
+  const { leadIn } = usePulseLeadIn();
   const { remaining: getReadyCount, begin: beginGetReady, cancel: cancelGetReady } =
-    useGetReady(5, () => start());
+    useGetReady(leadIn, () => start());
   const isGettingReady = getReadyCount !== null;
 
   const isDone = hasStarted && isComplete;
@@ -206,7 +208,9 @@ function PulseCounter({ label, onUse, onCancel }: PulseCounterProps) {
             ? 'Get ready…'
             : isDone
               ? `${beats} beats in ${COUNT_WINDOW} s`
-              : 'Find your pulse, then start the countdown'}
+              : leadIn > 0
+                ? 'Find your pulse, then start the countdown'
+                : 'Find your pulse, then start the count'}
       </p>
 
       {isDone ? (

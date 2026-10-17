@@ -22,8 +22,8 @@ const clampDuration = (seconds: number) =>
 
 /**
  * Reduced breathing practised on its own, away from a set. The timer is the one
- * the set uses — same pacer, same tips, same manual entry — with the length
- * chosen up front rather than taken from the exercise-set format, since this is
+ * the set uses — same breathing circle, same tips, same manual entry — with
+ * the length chosen up front rather than taken from the exercise-set format, since this is
  * not part of a set.
  */
 export default function LogRBPage() {

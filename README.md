@@ -82,11 +82,13 @@ Sessions logged before the format was configurable are read back unchanged.
   catches up the moment it is visible again.
 - The screen is held awake (where the browser supports it) while a timer runs.
 - A countdown chimes and vibrates when it finishes.
-- Pulse opens on a 15-second count, led in by a 5-second countdown so the phone
-  can be put down first: tap the circle on each beat (or type the total
-  afterwards) and the count is scaled to beats per minute. The window can be 30
-  or 60 seconds instead, and the number can be typed straight in or read from a
+- Pulse opens on a 15-second count, led in by a countdown (5 seconds unless
+  changed in Settings, or off) so the phone can be put down first: tap the
+  circle on each beat (or type the total afterwards) and the count is scaled to
+  beats per minute. The number can also be typed straight in or read from a
   Bluetooth heart-rate monitor.
+- The circle shown during reduced breathing stays still, so there is no fixed
+  breath rate to follow: the right pace differs from person to person.
 
 ## Your data
 

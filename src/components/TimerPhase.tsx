@@ -2,29 +2,19 @@
 
 import React from 'react';
 
-/** Seconds per inhale / exhale in the pacing animation ≈ 6 breaths a minute. */
-export const BREATH_PHASE_SECONDS = 5;
-
 /**
- * The circle that paces reduced breathing. It scales between inhale and exhale
- * over the phase length rather than animating on its own interval, so it stays
- * in step with the clock after the tab has been backgrounded.
+ * The circle shown during reduced breathing. It deliberately stays still: a
+ * moving circle sets a fixed breath rate to follow, and the right pace differs
+ * from person to person.
  */
-export function BreathPacer({ isRunning, phase }: { isRunning: boolean; phase: 'inhale' | 'exhale' }) {
+export function BreathCircle() {
   return (
     <div className="flex flex-col items-center mb-3">
       <div className="w-20 h-20 flex items-center justify-center">
-        <div
-          className={`w-20 h-20 rounded-full bg-blue-50 dark:bg-blue-950/40 border-2 border-blue-200 dark:border-blue-800 transition-transform ease-in-out ${
-            isRunning && phase === 'inhale' ? 'scale-100' : 'scale-[0.55]'
-          }`}
-          style={{ transitionDuration: `${BREATH_PHASE_SECONDS * 1000}ms` }}
-        />
+        <div className="w-20 h-20 rounded-full bg-blue-50 dark:bg-blue-950/40 border-2 border-blue-200 dark:border-blue-800" />
       </div>
       <p className="text-xs text-blue-400 mt-2 h-4 font-medium">
-        {isRunning
-          ? phase === 'inhale' ? 'breathe in…' : 'breathe out…'
-          : 'breathe gently through your nose'}
+        breathe gently through your nose
       </p>
     </div>
   );

@@ -104,4 +104,13 @@ describe('useGetReady', () => {
     expect(first).not.toHaveBeenCalled();
     expect(second).toHaveBeenCalledTimes(1);
   });
+
+  it('goes straight away when the lead-in is 0 seconds', () => {
+    const onGo = vi.fn();
+    const { result } = renderHook(() => useGetReady(0, onGo));
+
+    act(() => result.current.begin());
+    expect(onGo).toHaveBeenCalledTimes(1);
+    expect(result.current.remaining).toBeNull();
+  });
 });
