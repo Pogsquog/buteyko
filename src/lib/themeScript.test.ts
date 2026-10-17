@@ -84,12 +84,27 @@ describe('THEME_SCRIPT', () => {
     ['not JSON at all', 'not json'],
     ['JSON that is not an object', '42'],
     ['an unknown mode', '{"mode":"midnight"}'],
-    ['hours that are not numbers', '{"mode":"schedule","fromHour":"late","toHour":null}'],
   ])('survives %s', (_name, raw) => {
     localStorage.setItem(THEME_STORAGE_KEY, raw);
     setDeviceDark(true);
     expect(() => runScript()).not.toThrow();
     expect(applied().isDark).toBe(true); // fell back to matching the device
+  });
+
+  it('survives hours that are not numbers, keeping the schedule on the default hours', () => {
+    // The mode is valid, so it stands; only the hours fall back. The result
+    // therefore depends on the clock, which is pinned either side of the
+    // default window rather than left to the time the tests happen to run.
+    localStorage.setItem(THEME_STORAGE_KEY, '{"mode":"schedule","fromHour":"late","toHour":null}');
+    setDeviceDark(true);
+    const onDefaultHours = (hour: number) =>
+      resolveTheme({ ...DEFAULT_THEME, mode: 'schedule' }, { hour, prefersDark: true }) === 'dark';
+
+    for (const hour of [DEFAULT_THEME.fromHour, DEFAULT_THEME.toHour]) {
+      setClock(hour);
+      expect(() => runScript()).not.toThrow();
+      expect(applied().isDark, `at ${hour}:30`).toBe(onDefaultHours(hour));
+    }
   });
 
   it('clamps a stored schedule the same way clampTheme does', () => {
