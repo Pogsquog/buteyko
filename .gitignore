@@ -34,6 +34,8 @@ yarn-error.log*
 .env*
 # ...except the template, which holds no secrets and documents what to set.
 !.env.example
+# ...and the production values, which are public (see the file itself).
+!.env.production
 
 # vercel
 .vercel

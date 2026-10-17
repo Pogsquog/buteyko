@@ -125,9 +125,12 @@ removed after taking it.
 
 ### Setting up sync
 
-Sync is off unless the build is given a project. Copy `.env.example` to
+Sync is off unless the build is given a project. The project this app syncs
+with is committed in `.env.production`, so every production build — including
+Cloudflare's build from git — has it. For development, copy `.env.example` to
 `.env.local` and fill in the two values from the Supabase dashboard
-(Project Settings → API); with them unset the app builds and runs local-only.
+(Project Settings → API); with them unset `next dev` runs local-only. A fork
+that should stay local-only deletes `.env.production`.
 
 The project needs, under Authentication → URL Configuration:
 
